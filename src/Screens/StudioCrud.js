@@ -1,35 +1,105 @@
-import React, { useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  FormControl, 
-  RadioGroup, 
-  FormControlLabel, 
-  Radio, 
-  TextField, 
-  Button, 
-  TableContainer, 
-  Table, 
-  TableHead, 
-  TableRow, 
-  TableCell, 
-  TableBody, 
-  Paper 
-} from '@mui/material';
-import axios from 'axios';
-import { Dialog, DialogTitle, DialogContent, IconButton } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+import { useState } from "react";
+import {
+  Box,
+  Typography,
+  FormControl,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  TextField,
+  Button,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Paper,
+  Grid,
+} from "@mui/material";
+import axios from "axios";
+import AddStudio from "../Components/studio-crud/AddStudio";
+import { updateDaysFormat } from "../utils/mapping";
 
+const WINDOWS = {
+  DEFAULT: "default",
+  ADD_STUDIO: "addStudio",
+  UPDATE_STUDIO: "updateStudio",
+};
 
 // Mode URLs
 const server = {
-  "PRODUCTION": "https://djserver-production-ffe37b1b53b5.herokuapp.com/",
-  "STAGING": "https://nrityaserver-2b241e0a97e5.herokuapp.com/"
+  PRODUCTION: "https://djserver-production-ffe37b1b53b5.herokuapp.com/",
+  STAGING: "https://nrityaserver-2b241e0a97e5.herokuapp.com/",
 };
 
 const render = {
-  "PRODUCTION": "https://www.nritya.co.in/",
-  "STAGING": "https://nritya-official.github.io/nritya-webApp/"
+  PRODUCTION: "https://www.nritya.co.in/",
+  STAGING: "https://nritya-official.github.io/nritya-webApp/",
+};
+
+const initialData = {
+  studioName: "",
+  founderName: "",
+  aboutStudio: "",
+  aboutFounder: "",
+
+  mobileNumber: "",
+  mailAddress: "",
+  whatsappNumber: "",
+
+  danceStyles: [],
+  maximumOccupancy: "",
+  numberOfHalls: "",
+
+  instructorsNames: [],
+
+  buildingName: "",
+  landmark: "",
+  street: "",
+  pincode: "",
+  city: "",
+  state: "",
+  country: "India",
+  mapAddress: "",
+  geolocation: {
+    lat: null,
+    lng: null,
+  },
+
+  gstNumber: "",
+  addAmenities: [],
+  enrollmentProcess: "",
+
+  tableData: [
+    {
+      fee: "",
+      freeTrial: "",
+      className: "",
+      time: "",
+      days: [],
+      danceForms: "",
+      level: "",
+      instructors: [],
+      status: "",
+      classCategory: [],
+    },
+  ],
+
+  timings: {
+    tuesday: [{ open: "09:00 AM", close: "06:00 PM" }],
+    wednesday: [{ open: "09:00 AM", close: "06:00 PM" }],
+    thursday: [{ open: "09:00 AM", close: "06:00 PM" }],
+    friday: [{ open: "09:00 AM", close: "06:00 PM" }],
+    saturday: [{ open: "09:00 AM", close: "06:00 PM" }],
+    sunday: [{ open: "09:00 AM", close: "06:00 PM" }],
+    monday: [{ open: "09:00 AM", close: "06:00 PM" }],
+  },
+
+  instagram: "",
+  facebook: "",
+  youtube: "",
+  twitter: "",
 };
 
 function StudioCrud() {
@@ -37,11 +107,18 @@ function StudioCrud() {
   const [searchType, setSearchType] = useState("EMAIL");
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState([]);
-  const [submitting, setSubmitting] =useState(false)
+  const [submitting, setSubmitting] = useState(false);
   const [selectedStudio, setSelectedStudio] = useState(null);
+  const [currentWindow, setCurrentWindow] = useState(WINDOWS.DEFAULT);
+  const [userId, setUserId] = useState("");
+  const [isSubmited, setIsSubmited] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   const baseUrlServer = server[mode];
   const baseUrlRender = render[mode];
-  
+
+  const [formData, setFormData] = useState(initialData);
+  const [errors, setErrors] = useState({});
 
   const handleSearch = async () => {
     let searchUrl = `${baseUrlServer}crud/listStudiosWithFilters/`;
@@ -52,46 +129,44 @@ function StudioCrud() {
       searchUrl += `?city=${searchQuery}`;
     }
 
-    console.log("Search URL:", searchUrl);
-
     try {
-      setSubmitting(true)
-      setResults([])
+      setSubmitting(true);
+      setResults([]);
       const response = await axios.get(searchUrl);
       setResults(response.data.data || []); // assuming response.data.data holds the array
+      setIsSubmited(true);
     } catch (error) {
       console.error("Error fetching studios:", error);
       setResults([]);
-    } finally{
-      setSubmitting(false)
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const pushData = async (id, entityType) => {
     try {
-      const updatedData = {
-        studioName: selectedStudio.studioName,
-        creatorEmail: selectedStudio.creatorEmail,
-        city: selectedStudio.city,
-        founderName: selectedStudio.founderName,
-        aboutFounder: selectedStudio.aboutFounder,
-        status: selectedStudio.status,
-        mobileNumber: selectedStudio.mobileNumber,
-        street: selectedStudio.street,
-        danceStyles: selectedStudio.danceStyles,
-        addAmenities: selectedStudio.addAmenities,
-        maximumOccupancy: selectedStudio.maximumOccupancy,
-        aboutStudio: selectedStudio.aboutStudio,
-        // optionally any other fields you want to push
+      const formatedData = {
+        ...formData,
+        danceStyles: formData.danceStyles.join(","),
+        addAmenities: formData.addAmenities.join(","),
+        tableData: formData.tableData.reduce((acc, item, index) => {
+          acc[index] = { ...item };
+          acc[index].days = acc[index].days.join(",");
+          return acc;
+        }, {}),
       };
-      const response = await fetch(`${baseUrlServer}n_admin/push_data/${id}/${entityType}/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedData),
-      });
-  
+
+      const response = await fetch(
+        `${baseUrlServer}n_admin/push_data/${id}/${entityType}/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formatedData),
+        }
+      );
+
       const data = await response.json();
       if (response.ok) {
         console.log("Data pushed successfully:", data);
@@ -105,380 +180,234 @@ function StudioCrud() {
       alert("Network error. Please try again.");
     }
   };
-  
+
+  const handleStudioClick = (studio) => {
+    setIsUpdating(true);
+
+    setSelectedStudio(studio);
+
+    setFormData(() => {
+      const formatedData = { ...studio };
+
+      formatedData.danceStyles = formatedData.danceStyles
+        .split(",")
+        .filter(Boolean);
+
+      formatedData.addAmenities = formatedData.addAmenities
+        .split(",")
+        .filter(Boolean);
+
+      formatedData.tableData = Object.values(formatedData.tableData).map(
+        (item) => ({
+          ...item,
+          days: updateDaysFormat(item.days.split(",").filter(Boolean)),
+        })
+      );
+
+      return formatedData;
+    });
+
+    setCurrentWindow(WINDOWS.UPDATE_STUDIO);
+  };
+
+  const handleBack = () => {
+    setCurrentWindow(WINDOWS.DEFAULT);
+    setIsUpdating(false);
+    setFormData(initialData);
+    setSelectedStudio(null);
+    setErrors({});
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (isUpdating) {
+      setIsUpdating(false);
+      await pushData(selectedStudio.id, "Studio");
+      setSelectedStudio(null);
+    } else {
+      // Add new studio
+    }
+
+    setFormData(initialData);
+    setCurrentWindow(WINDOWS.DEFAULT);
+    setErrors({});
+    await handleSearch();
+  };
 
   return (
     <>
-    <Box sx={{ p: 4, maxWidth: "100", margin: 'auto', fontFamily: 'sans-serif' }}>
-      <Typography variant="h5" gutterBottom>
-        Studio CRUD
-      </Typography>
-
-      {/* Mode Select */}
-      <FormControl component="fieldset">
-        <RadioGroup row value={mode} onChange={(e) => setMode(e.target.value)}>
-          <FormControlLabel value="STAGING" control={<Radio />} label="Staging" />
-          <FormControlLabel value="PRODUCTION" control={<Radio />} label="Production" />
-        </RadioGroup>
-      </FormControl>
-
-      <br />
-
-      {/* Search Type */}
-      <FormControl component="fieldset" sx={{ mb: 2 }}>
-        <RadioGroup row value={searchType} onChange={(e) => setSearchType(e.target.value)}>
-          <FormControlLabel value="EMAIL" control={<Radio />} label="Search by Email" />
-          <FormControlLabel value="CITY" control={<Radio />} label="Search by City" />
-        </RadioGroup>
-      </FormControl>
-
-      {/* Search Input */}
-      <TextField
-        label={`Enter ${searchType}`}
-        variant="outlined"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        fullWidth
-        sx={{ mb: 2 }}
-      />
-
-      <Button variant="contained" color="primary" disabled={submitting} onClick={handleSearch} fullWidth>
-        {submitting ? "Searching...":"Search"}
-      </Button>
-
-      {results.length > 0 && (
-        <TableContainer component={Paper} sx={{ mt: 4 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-              <TableCell><b>Studio ID</b></TableCell>
-                <TableCell><b>Studio Name</b></TableCell>
-                <TableCell><b>Creator Email</b></TableCell>
-                <TableCell><b>City</b></TableCell>
-                <TableCell><b>Founder Name</b></TableCell>
-                <TableCell><b>Status</b></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {results.map((studio, index) => (
-                <TableRow key={index} onClick={() => setSelectedStudio(studio)} sx={{ cursor: 'pointer' }}>
-                 <TableCell>
-                  <a
-                    href={`${baseUrlRender}#/studio/${studio.id}`}
-                    style={{ textDecoration: 'none', color: 'inherit' }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {studio.id}
-                  </a>
-                </TableCell>
-
-                  <TableCell>{studio.studioName}</TableCell>
-                  <TableCell>{studio.creatorEmail}</TableCell>
-                  <TableCell>{studio.city}</TableCell>
-                  <TableCell>{studio.founderName}</TableCell>
-                  <TableCell>{studio.status}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        
+      {(currentWindow === WINDOWS.ADD_STUDIO ||
+        currentWindow === WINDOWS.UPDATE_STUDIO) && (
+        <AddStudio
+          isUpdating={isUpdating}
+          formData={formData}
+          setFormData={setFormData}
+          errors={errors}
+          onBack={handleBack}
+          onSubmit={handleSubmit}
+        />
       )}
-    </Box>
-    <Dialog open={Boolean(selectedStudio)} onClose={() => setSelectedStudio(null)} maxWidth="100%" fullWidth>
-  <DialogTitle>
-    {selectedStudio?.studioName}
-    <IconButton
-      aria-label="close"
-      onClick={() => setSelectedStudio(null)}
-      sx={{ position: 'absolute', right: 8, top: 8 }}
-    >
-      <CloseIcon />
-    </IconButton>
-  </DialogTitle>
-  <DialogContent dividers>
 
-    {/* Studio basic info */}
-    {selectedStudio && (
-  <Box sx={{ p: 2 }}>
-    <Typography variant="h6" gutterBottom>Edit Studio Details</Typography>
-    
-    <TextField
-      label="Studio Name"
-      value={selectedStudio.studioName || ""}
-      onChange={(e) =>
-        setSelectedStudio({ ...selectedStudio, studioName: e.target.value })
-      }
-      fullWidth
-      margin="normal"
-    />
+      {currentWindow === WINDOWS.DEFAULT && (
+        <>
+          <Box
+            sx={{
+              p: 4,
+              maxWidth: "100",
+              margin: "auto",
+              fontFamily: "sans-serif",
+            }}
+          >
+            <Typography variant="h5" gutterBottom>
+              Studio CRUD
+            </Typography>
 
-    <TextField
-      label="Creator Email"
-      value={selectedStudio.creatorEmail || ""}
-      onChange={(e) =>
-        setSelectedStudio({ ...selectedStudio, creatorEmail: e.target.value })
-      }
-      fullWidth
-      margin="normal"
-    />
-
-    <TextField
-      label="City"
-      value={selectedStudio.city || ""}
-      onChange={(e) =>
-        setSelectedStudio({ ...selectedStudio, city: e.target.value })
-      }
-      fullWidth
-      margin="normal"
-    />
-
-    <TextField
-      label="Founder Name"
-      value={selectedStudio.founderName || ""}
-      onChange={(e) =>
-        setSelectedStudio({ ...selectedStudio, founderName: e.target.value })
-      }
-      fullWidth
-      margin="normal"
-    />
-
-    <TextField
-      label="Status"
-      value={selectedStudio.status || ""}
-      onChange={(e) =>
-        setSelectedStudio({ ...selectedStudio, status: e.target.value })
-      }
-      fullWidth
-      margin="normal"
-    />
-
-    <TextField
-      label="Mobile Number"
-      value={selectedStudio.mobileNumber || ""}
-      onChange={(e) =>
-        setSelectedStudio({ ...selectedStudio, mobileNumber: e.target.value })
-      }
-      fullWidth
-      margin="normal"
-    />
-
-    <TextField
-      label="Street"
-      value={selectedStudio.street || ""}
-      onChange={(e) =>
-        setSelectedStudio({ ...selectedStudio, street: e.target.value })
-      }
-      fullWidth
-      margin="normal"
-    />
-
-    <TextField
-      label="Dance Styles"
-      value={Array.isArray(selectedStudio.danceStyles)
-        ? selectedStudio.danceStyles.join(", ")
-        : selectedStudio.danceStyles || ""}
-      
-      onChange={(e) =>
-        setSelectedStudio({
-          ...selectedStudio,
-          danceStyles: e.target.value.split(",").map((item) => item.trim()),
-        })
-      }
-      fullWidth
-      margin="normal"
-    />
-
-    <TextField
-      label="Amenities"
-      value={Array.isArray(selectedStudio.addAmenities)
-        ? selectedStudio.addAmenities.join(", ")
-        : selectedStudio.addAmenities || ""}
-      
-      onChange={(e) =>
-        setSelectedStudio({
-          ...selectedStudio,
-          addAmenities: e.target.value.split(",").map((item) => item.trim()),
-        })
-      }
-      fullWidth
-      margin="normal"
-    />
-
-    <TextField
-      label="Maximum Occupancy"
-      type="number"
-      value={selectedStudio.maximumOccupancy || ""}
-      onChange={(e) =>
-        setSelectedStudio({
-          ...selectedStudio,
-          maximumOccupancy: e.target.value,
-        })
-      }
-      fullWidth
-      margin="normal"
-    />
-
-    <TextField
-      label="About Studio"
-      multiline
-      minRows={3}
-      value={selectedStudio.aboutStudio || ""}
-      onChange={(e) =>
-        setSelectedStudio({
-          ...selectedStudio,
-          aboutStudio: e.target.value,
-        })
-      }
-      fullWidth
-      margin="normal"
-    />
-
-  <TextField
-        label="About Founder"
-        multiline
-        minRows={3}
-        value={selectedStudio.aboutFounder || ""}
-        onChange={(e) =>
-          setSelectedStudio({
-            ...selectedStudio,
-            aboutFounder: e.target.value,
-          })
-        }
-        fullWidth
-        margin="normal"
-      />
-
-    <Button
-      variant="contained"
-      color="primary"
-      sx={{ mt: 2 }}
-      onClick={() => pushData(selectedStudio.id, "Studio")}
-    >
-      Save Changes
-    </Button>
-  </Box>
-)}
-
-
-    {/* Class Schedule Table */}
-    {selectedStudio?.tableData && (
-  <>
-    <Typography variant="h6" gutterBottom>Classes (Edit)</Typography>
-    <TableContainer component={Paper}>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell><b>Class Name</b></TableCell>
-            <TableCell><b>Dance Form</b></TableCell>
-            <TableCell><b>Days</b></TableCell>
-            <TableCell><b>Time</b></TableCell>
-            <TableCell><b>Fee</b></TableCell>
-            <TableCell><b>Free Trial</b></TableCell>
-            <TableCell><b>Category</b></TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {Object.entries(selectedStudio.tableData).map(([key, classItem]) => (
-            <TableRow key={key}>
-              <TableCell>
-                <TextField
-                  value={classItem.className}
-                  onChange={(e) => {
-                    const updatedTableData = { ...selectedStudio.tableData };
-                    updatedTableData[key].className = e.target.value;
-                    setSelectedStudio({ ...selectedStudio, tableData: updatedTableData });
-                  }}
-                  size="small"
+            {/* Mode Select */}
+            <FormControl component="fieldset">
+              <RadioGroup
+                row
+                value={mode}
+                onChange={(e) => setMode(e.target.value)}
+              >
+                <FormControlLabel
+                  value="STAGING"
+                  control={<Radio />}
+                  label="Staging"
                 />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={classItem.danceForms}
-                  onChange={(e) => {
-                    const updatedTableData = { ...selectedStudio.tableData };
-                    updatedTableData[key].danceForms = e.target.value;
-                    setSelectedStudio({ ...selectedStudio, tableData: updatedTableData });
-                  }}
-                  size="small"
+                <FormControlLabel
+                  value="PRODUCTION"
+                  control={<Radio />}
+                  label="Production"
                 />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={classItem.days}
-                  onChange={(e) => {
-                    const updatedTableData = { ...selectedStudio.tableData };
-                    updatedTableData[key].days = e.target.value;
-                    setSelectedStudio({ ...selectedStudio, tableData: updatedTableData });
-                  }}
-                  size="small"
-                />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={classItem.time}
-                  onChange={(e) => {
-                    const updatedTableData = { ...selectedStudio.tableData };
-                    updatedTableData[key].time = e.target.value;
-                    setSelectedStudio({ ...selectedStudio, tableData: updatedTableData });
-                  }}
-                  size="small"
-                />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={classItem.fee}
-                  onChange={(e) => {
-                    const updatedTableData = { ...selectedStudio.tableData };
-                    updatedTableData[key].fee = e.target.value;
-                    setSelectedStudio({ ...selectedStudio, tableData: updatedTableData });
-                  }}
-                  size="small"
-                />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={classItem.freeTrial}
-                  onChange={(e) => {
-                    const updatedTableData = { ...selectedStudio.tableData };
-                    updatedTableData[key].freeTrial = e.target.value;
-                    setSelectedStudio({ ...selectedStudio, tableData: updatedTableData });
-                  }}
-                  size="small"
-                />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={(classItem.classCategory || []).join(', ')}
-                  onChange={(e) => {
-                    const updatedTableData = { ...selectedStudio.tableData };
-                    updatedTableData[key].classCategory = e.target.value.split(',').map(cat => cat.trim());
-                    setSelectedStudio({ ...selectedStudio, tableData: updatedTableData });
-                  }}
-                  size="small"
-                />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+              </RadioGroup>
+            </FormControl>
 
-    <Button
-      variant="contained"
-      color="primary"
-      sx={{ mt: 2 }}
-      onClick={() => pushData(selectedStudio.id, "Studio")}
-    >
-      Save Changes
-    </Button>
-  </>
-)}
+            <br />
 
+            {/* Search Type */}
+            <FormControl component="fieldset" sx={{ mb: 2 }}>
+              <RadioGroup
+                row
+                value={searchType}
+                onChange={(e) => setSearchType(e.target.value)}
+              >
+                <FormControlLabel
+                  value="EMAIL"
+                  control={<Radio />}
+                  label="Search by Email"
+                />
+                <FormControlLabel
+                  value="CITY"
+                  control={<Radio />}
+                  label="Search by City"
+                />
+              </RadioGroup>
+            </FormControl>
 
-  </DialogContent>
-</Dialog>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label={`Enter User Id`}
+                  variant="outlined"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  fullWidth
+                  sx={{ mb: 2, width: "100%" }}
+                />
+              </Grid>
 
+              <Grid item xs={12} md={6}>
+                {/* Search Input */}
+                <TextField
+                  label={`Enter ${searchType}`}
+                  variant="outlined"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  fullWidth
+                  sx={{ mb: 2, width: "100%" }}
+                />
+              </Grid>
+            </Grid>
+
+            <Button
+              variant="contained"
+              color="primary"
+              disabled={submitting}
+              onClick={handleSearch}
+              fullWidth
+            >
+              {submitting ? "Searching..." : "Search"}
+            </Button>
+
+            {isSubmited && (
+              <Box sx={{ display: "flex", justifyContent: "end", mt: 2 }}>
+                <Button
+                  variant="text"
+                  color="primary"
+                  onClick={() => setCurrentWindow(WINDOWS.ADD_STUDIO)}
+                >
+                  Add Studio
+                </Button>
+              </Box>
+            )}
+
+            {results.length > 0 && (
+              <TableContainer component={Paper} sx={{ mt: 4 }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>
+                        <b>Studio ID</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Studio Name</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Creator Email</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>City</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Founder Name</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Status</b>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {results.map((studio, index) => (
+                      <TableRow
+                        key={index}
+                        onClick={() => handleStudioClick(studio)}
+                        sx={{ cursor: "pointer" }}
+                      >
+                        <TableCell>
+                          <a
+                            href={`${baseUrlRender}#/studio/${studio.id}`}
+                            style={{ textDecoration: "none", color: "inherit" }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {studio.id}
+                          </a>
+                        </TableCell>
+
+                        <TableCell>{studio.studioName}</TableCell>
+                        <TableCell>{studio.creatorEmail}</TableCell>
+                        <TableCell>{studio.city}</TableCell>
+                        <TableCell>{studio.founderName}</TableCell>
+                        <TableCell>{studio.status}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Box>
+        </>
+      )}
     </>
   );
 }
