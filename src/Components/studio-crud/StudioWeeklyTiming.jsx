@@ -2,49 +2,24 @@ import { useContext } from "react";
 import {
   Button,
   Grid,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   Typography,
   Box,
   Switch,
   FormControlLabel,
-  Paper,
+  TextField,
 } from "@mui/material";
+import dayjs from "dayjs";
 import dayOrder from "../../days.json";
 import AuthContext from "../../context/AuthProvider";
-
-const generateTimeOptions = () => {
-  let option_AM = [];
-  let option_PM = [];
-  for (let hours = 0; hours < 24; hours++) {
-    for (let minutes = 0; minutes < 60; minutes += 15) {
-      const formattedHours = hours.toString().padStart(2, "0");
-      const formattedMinutes = minutes.toString().padStart(2, "0");
-      const timeString = `${formattedHours}:${formattedMinutes}`;
-
-      if (hours < 12) {
-        option_AM.push(`${timeString} AM`);
-      } else {
-        const formattedHours12 = (hours === 12 ? 12 : hours - 12)
-          .toString()
-          .padStart(2, "0");
-        option_PM.push(`${formattedHours12}:${formattedMinutes} PM`);
-      }
-    }
-  }
-
-  return [...option_AM, ...option_PM];
-};
+import { TimePicker } from "@mui/x-date-pickers";
 
 const StudioWeeklyTimings = ({ formData, setFormData }) => {
   const { darkMode } = useContext(AuthContext);
   const timings = formData.timings || {};
 
-  const handleSelect = (day, index, type, value) => {
+  const handleTimeChange = (day, index, type, newValue) => {
     const updatedDayTimings = [...(timings[day] || [])];
-    updatedDayTimings[index][type] = value;
+    updatedDayTimings[index][type] = dayjs(newValue).format("hh:mm A");
 
     setFormData({
       ...formData,
@@ -107,12 +82,10 @@ const StudioWeeklyTimings = ({ formData, setFormData }) => {
     return dayTimings.length === 1 && dayTimings[0].open === "Closed";
   };
 
-  const timeOptions = generateTimeOptions();
-
   return (
     <Grid container spacing={3}>
       {dayOrder.map((day) => (
-        <Grid item xs={12} sm={6} md={4} xl={3} key={day}>
+        <Grid item xs={12} sm={6} md={4} key={day}>
           <Box sx={{ p: 2, border: "1px solid #ddd", borderRadius: 1 }}>
             <Box
               sx={{
@@ -140,7 +113,6 @@ const StudioWeeklyTimings = ({ formData, setFormData }) => {
                       color={darkMode ? "default" : "primary"}
                     />
                   }
-                  label=""
                   labelPlacement="start"
                 />
               </Box>
@@ -151,40 +123,40 @@ const StudioWeeklyTimings = ({ formData, setFormData }) => {
                 <Box key={index} sx={{ mb: 2 }}>
                   <Grid container spacing={1} alignItems="center">
                     <Grid item xs={5}>
-                      <FormControl fullWidth size="small">
-                        <InputLabel>Start Time</InputLabel>
-                        <Select
-                          value={slot.open}
-                          onChange={(e) =>
-                            handleSelect(day, index, "open", e.target.value)
-                          }
-                          label="Start Time"
-                        >
-                          {timeOptions.map((option) => (
-                            <MenuItem key={option} value={option}>
-                              {option}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
+                      <TimePicker
+                        label="Start Time"
+                        value={
+                          slot.open === "Closed"
+                            ? null
+                            : dayjs(slot.open, "hh:mm A")
+                        }
+                        onChange={(newValue) =>
+                          handleTimeChange(day, index, "open", newValue)
+                        }
+                        renderInput={(params) => (
+                          <TextField {...params} size="small" fullWidth />
+                        )}
+                        timeSteps={{ minutes: 1 }}
+                        views={["hours", "minutes"]}
+                      />
                     </Grid>
                     <Grid item xs={5}>
-                      <FormControl fullWidth size="small">
-                        <InputLabel>End Time</InputLabel>
-                        <Select
-                          value={slot.close}
-                          onChange={(e) =>
-                            handleSelect(day, index, "close", e.target.value)
-                          }
-                          label="End Time"
-                        >
-                          {timeOptions.map((option) => (
-                            <MenuItem key={option} value={option}>
-                              {option}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
+                      <TimePicker
+                        label="End Time"
+                        value={
+                          slot.close === "Closed"
+                            ? null
+                            : dayjs(slot.close, "hh:mm A")
+                        }
+                        onChange={(newValue) =>
+                          handleTimeChange(day, index, "close", newValue)
+                        }
+                        renderInput={(params) => (
+                          <TextField {...params} size="small" fullWidth />
+                        )}
+                        timeSteps={{ minutes: 1 }}
+                        views={["hours", "minutes"]}
+                      />
                     </Grid>
                     <Grid item xs={2}>
                       <Button

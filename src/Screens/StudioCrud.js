@@ -52,8 +52,6 @@ const initialData = {
   maximumOccupancy: "",
   numberOfHalls: "",
 
-  instructorsNames: [],
-
   buildingName: "",
   landmark: "",
   street: "",
@@ -80,7 +78,7 @@ const initialData = {
       days: [],
       danceForms: "",
       level: "",
-      instructors: [],
+      instructors: "",
       status: "",
       classCategory: [],
     },
@@ -151,6 +149,7 @@ function StudioCrud() {
         addAmenities: formData.addAmenities.join(","),
         tableData: formData.tableData.reduce((acc, item, index) => {
           acc[index] = { ...item };
+          acc[index].instructors = acc[index].instructors?.split(",");
           acc[index].days = acc[index].days.join(",");
           return acc;
         }, {}),
@@ -201,6 +200,9 @@ function StudioCrud() {
         (item) => ({
           ...item,
           days: updateDaysFormat(item.days.split(",").filter(Boolean)),
+          instructors: Array.isArray(item.instructors)
+            ? item?.instructors?.join?.(",")
+            : item.instructors,
         })
       );
 

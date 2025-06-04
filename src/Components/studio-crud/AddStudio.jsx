@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Autocomplete,
 } from "@mui/material";
 import dayjs from "dayjs";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
@@ -117,6 +118,8 @@ const TimeRangeModal = ({ open, onClose, value, onChange, index }) => {
               value={startTime}
               onChange={setStartTime}
               ampm={true}
+              timeSteps={{ minutes: 1 }}
+              views={["hours", "minutes"]}
             />
             <Box>to</Box>
             <TimePicker
@@ -124,6 +127,8 @@ const TimeRangeModal = ({ open, onClose, value, onChange, index }) => {
               value={endTime}
               onChange={setEndTime}
               ampm={true}
+              timeSteps={{ minutes: 1 }}
+              views={["hours", "minutes"]}
             />
           </Box>
         </LocalizationProvider>
@@ -458,28 +463,39 @@ const AddStudio = ({
                 <Typography variant="body1" gutterBottom>
                   Dance Styles
                 </Typography>
-                <FormControl fullWidth error={errors?.danceStyles}>
-                  <Select
+                <FormControl fullWidth error={!!errors?.danceStyles}>
+                  <Autocomplete
                     multiple
+                    options={danceStylesOptions}
                     value={formData.danceStyles}
-                    onChange={(e) =>
-                      handleMultiSelectChange("danceStyles", e.target.value)
-                    }
-                    renderValue={(selected) => (
+                    onChange={(event, newValue) => {
+                      handleMultiSelectChange("danceStyles", newValue);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        error={!!errors?.danceStyles}
+                        helperText={errors?.danceStyles}
+                      />
+                    )}
+                    renderTags={(selected, getTagProps) => (
                       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                        {selected.map((value) => (
-                          <Chip key={value} label={value} size="small" />
+                        {selected.map((value, index) => (
+                          <Chip
+                            key={value}
+                            label={value}
+                            size="small"
+                            {...getTagProps({ index })}
+                          />
                         ))}
                       </Box>
                     )}
-                  >
-                    {danceStylesOptions.map((style) => (
-                      <MenuItem key={style} value={style}>
-                        <ListItemText primary={style} />
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText>{errors?.danceStyles}</FormHelperText>
+                    renderOption={(props, option) => (
+                      <li {...props}>
+                        <ListItemText primary={option} />
+                      </li>
+                    )}
+                  />
                 </FormControl>
               </Grid>
               <Grid item xs={12} md={6}>
@@ -509,47 +525,6 @@ const AddStudio = ({
                   error={errors?.numberOfHalls}
                   helperText={errors?.numberOfHalls}
                 />
-              </Grid>
-            </Grid>
-          </Paper>
-
-          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Instructor Details
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography variant="body1" gutterBottom>
-                  Names of Instructors
-                </Typography>
-                <FormControl fullWidth error={errors?.instructorsNames}>
-                  <Select
-                    multiple
-                    value={formData.instructorsNames}
-                    onChange={(e) =>
-                      handleMultiSelectChange(
-                        "instructorsNames",
-                        e.target.value
-                      )
-                    }
-                    renderValue={(selected) => (
-                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                        {selected.map((value) => (
-                          <Chip key={value} label={value} size="small" />
-                        ))}
-                      </Box>
-                    )}
-                  >
-                    {[].map((style) => (
-                      <MenuItem key={style} value={style}>
-                        <ListItemText primary={style} />
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText>{errors?.instructorsNames}</FormHelperText>
-                </FormControl>
               </Grid>
             </Grid>
           </Paper>
@@ -668,6 +643,7 @@ const AddStudio = ({
                           autocompleteRef.current = autocomplete;
                         }}
                         onPlaceChanged={onPlaceChanged}
+                        className="w-full"
                       >
                         <TextField
                           fullWidth
@@ -832,25 +808,27 @@ const AddStudio = ({
                       fullWidth
                       error={errors.tableData?.[index]?.danceForms}
                     >
-                      <Select
+                      <Autocomplete
+                        options={danceStylesOptions}
                         value={schedule.danceForms}
-                        onChange={(e) =>
+                        onChange={(event, newValue) =>
                           handleClassScheduleChange(
                             index,
                             "danceForms",
-                            e.target.value
+                            newValue
                           )
                         }
-                      >
-                        {danceStylesOptions.map((style) => (
-                          <MenuItem key={style} value={style}>
-                            {style}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      <FormHelperText>
-                        {errors.tableData?.[index]?.danceForms}
-                      </FormHelperText>
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            error={!!errors.tableData?.[index]?.danceForms}
+                            helperText={errors.tableData?.[index]?.danceForms}
+                          />
+                        )}
+                        renderOption={(props, option) => (
+                          <MenuItem {...props}>{option}</MenuItem>
+                        )}
+                      />
                     </FormControl>
                   </Grid>
                   <Grid item xs={12} md={4}>
@@ -919,8 +897,7 @@ const AddStudio = ({
                       fullWidth
                       error={errors.tableData?.[index]?.instructors}
                     >
-                      <Select
-                        multiple
+                      <TextField
                         value={schedule.instructors}
                         onChange={(e) =>
                           handleClassScheduleChange(
@@ -929,25 +906,9 @@ const AddStudio = ({
                             e.target.value
                           )
                         }
-                        renderValue={(selected) => (
-                          <Box
-                            sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
-                          >
-                            {selected.map((value) => (
-                              <Chip key={value} label={value} size="small" />
-                            ))}
-                          </Box>
-                        )}
-                      >
-                        {[].map((instructor) => (
-                          <MenuItem key={instructor} value={instructor}>
-                            <ListItemText primary={instructor} />
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      <FormHelperText>
-                        {errors.tableData?.[index]?.instructors}
-                      </FormHelperText>
+                        error={errors.tableData?.[index]?.instructors}
+                        helperText={errors.tableData?.[index]?.instructors}
+                      />
                     </FormControl>
                   </Grid>
                   <Grid item xs={12} md={4}>
@@ -1069,6 +1030,11 @@ const AddStudio = ({
           </Paper>
 
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Studio Timings
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+
             <StudioWeeklyTimings
               formData={formData}
               setFormData={setFormData}
