@@ -108,9 +108,9 @@ function StudioCrud() {
   const [submitting, setSubmitting] = useState(false);
   const [selectedStudio, setSelectedStudio] = useState(null);
   const [currentWindow, setCurrentWindow] = useState(WINDOWS.DEFAULT);
-  const [userId, setUserId] = useState("");
   const [isSubmited, setIsSubmited] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [userDetails, setUserDetails] = useState(null);
 
   const baseUrlServer = server[mode];
   const baseUrlRender = render[mode];
@@ -123,8 +123,17 @@ function StudioCrud() {
 
     if (searchType === "EMAIL") {
       searchUrl += `?creatorEmail=${searchQuery}`;
+
+      try {
+        const response = await axios.get(`${baseUrlServer}crud/getUserDataByEmail/${searchQuery}`);
+
+        setUserDetails(response.data.data);
+      } catch (error) {
+        console.error(error);
+      }
     } else if (searchType === "CITY") {
       searchUrl += `?city=${searchQuery}`;
+      setUserDetails(null);
     }
 
     try {
@@ -141,20 +150,66 @@ function StudioCrud() {
     }
   };
 
-  const pushData = async (id, entityType) => {
-    try {
-      const formatedData = {
-        ...formData,
-        danceStyles: formData.danceStyles.join(","),
-        addAmenities: formData.addAmenities.join(","),
-        tableData: formData.tableData.reduce((acc, item, index) => {
-          acc[index] = { ...item };
-          acc[index].instructors = acc[index].instructors?.split(",");
-          acc[index].days = acc[index].days.join(",");
-          return acc;
-        }, {}),
-      };
+  const addData = async () => {
+    const formatedData = {
+      ...formData,
+      danceStyles: formData.danceStyles.join(","),
+      addAmenities: formData.addAmenities.join(","),
+      tableData: formData.tableData.reduce((acc, item, index) => {
+        acc[index] = { ...item };
+        acc[index].instructors = acc[index].instructors?.split(",");
+        acc[index].days = acc[index].days.join(",");
+        return acc;
+      }, {}),
 
+      UserId: userDetails?.UserId,
+      visibilty: 1,
+      status: "OPEN",
+      // isPremium: true,
+      country: "India",
+      creatorEmail: userDetails?.Email,
+    };
+
+    try {
+      const response = await fetch(
+        `${baseUrlServer}n_admin/new_data/Studio/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formatedData),
+        }
+      );
+
+      const data = await response.json();
+      if (response.ok) {
+        console.log("Data pushed successfully:", data);
+        alert("Studio added successfully!");
+      } else {
+        console.error("Error pushing data:", data);
+        alert("Failed to add. Check console for details.");
+      }
+    } catch (error) {
+      console.error("Push Error:", error);
+      alert("Network error. Please try again.");
+    }
+  };
+
+  const pushData = async (id, entityType) => {
+    const formatedData = {
+      ...formData,
+      danceStyles: formData.danceStyles.join(","),
+      addAmenities: formData.addAmenities.join(","),
+      tableData: formData.tableData.reduce((acc, item, index) => {
+        acc[index] = { ...item };
+        acc[index].instructors = acc[index].instructors?.split(",");
+        acc[index].days = acc[index].days.join(",");
+        return acc;
+      }, {}),
+    };
+
+    try {
       const response = await fetch(
         `${baseUrlServer}n_admin/push_data/${id}/${entityType}/`,
         {
@@ -228,7 +283,7 @@ function StudioCrud() {
       await pushData(selectedStudio.id, "Studio");
       setSelectedStudio(null);
     } else {
-      // Add new studio
+      await addData();
     }
 
     setFormData(initialData);
@@ -237,19 +292,28 @@ function StudioCrud() {
     await handleSearch();
   };
 
+  const changeSearchMode = (e) => {
+    setSearchType(e.target.value);
+    setFormData(initialData);
+    setCurrentWindow(WINDOWS.DEFAULT);
+    setUserDetails(null);
+    setResults([]);
+    setSearchQuery('');
+  };
+
   return (
     <>
       {(currentWindow === WINDOWS.ADD_STUDIO ||
         currentWindow === WINDOWS.UPDATE_STUDIO) && (
-        <AddStudio
-          isUpdating={isUpdating}
-          formData={formData}
-          setFormData={setFormData}
-          errors={errors}
-          onBack={handleBack}
-          onSubmit={handleSubmit}
-        />
-      )}
+          <AddStudio
+            isUpdating={isUpdating}
+            formData={formData}
+            setFormData={setFormData}
+            errors={errors}
+            onBack={handleBack}
+            onSubmit={handleSubmit}
+          />
+        )}
 
       {currentWindow === WINDOWS.DEFAULT && (
         <>
@@ -292,7 +356,7 @@ function StudioCrud() {
               <RadioGroup
                 row
                 value={searchType}
-                onChange={(e) => setSearchType(e.target.value)}
+                onChange={(e) => changeSearchMode(e)}
               >
                 <FormControlLabel
                   value="EMAIL"
@@ -307,30 +371,14 @@ function StudioCrud() {
               </RadioGroup>
             </FormControl>
 
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label={`Enter User Id`}
-                  variant="outlined"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                  fullWidth
-                  sx={{ mb: 2, width: "100%" }}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                {/* Search Input */}
-                <TextField
-                  label={`Enter ${searchType}`}
-                  variant="outlined"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  fullWidth
-                  sx={{ mb: 2, width: "100%" }}
-                />
-              </Grid>
-            </Grid>
+            <TextField
+              label={`Enter ${searchType}`}
+              variant="outlined"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              fullWidth
+              sx={{ mb: 2, width: "100%" }}
+            />
 
             <Button
               variant="contained"
@@ -342,7 +390,7 @@ function StudioCrud() {
               {submitting ? "Searching..." : "Search"}
             </Button>
 
-            {isSubmited && (
+            {(searchType === "EMAIL" && userDetails && isSubmited) && (
               <Box sx={{ display: "flex", justifyContent: "end", mt: 2 }}>
                 <Button
                   variant="text"
