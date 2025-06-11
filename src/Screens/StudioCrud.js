@@ -125,11 +125,18 @@ function StudioCrud() {
       searchUrl += `?creatorEmail=${searchQuery}`;
 
       try {
-        const response = await axios.get(`${baseUrlServer}crud/getUserDataByEmail/${searchQuery}`);
+        const response = await axios.get(`${baseUrlServer}crud/getUserDataByEmail/${searchQuery?.trim?.()}`);
 
-        setUserDetails(response.data.data);
+        if (Object.keys(response.data?.data || {}).length) {
+          setUserDetails(response.data?.data ?? null);
+        } else {
+          setUserDetails(null);
+          return alert("Failed to find user with the provided email");
+        }
       } catch (error) {
         console.error(error);
+        setUserDetails(null);
+        return alert("Failed to find user with the provided email");
       }
     } else if (searchType === "CITY") {
       searchUrl += `?city=${searchQuery}`;
@@ -163,11 +170,11 @@ function StudioCrud() {
       }, {}),
 
       UserId: userDetails?.UserId,
-      visibilty: 1,
+      visibility: 1,
       status: "OPEN",
       // isPremium: true,
       country: "India",
-      creatorEmail: userDetails?.Email,
+      creatorEmail: userDetails?.Email ?? null,
     };
 
     try {
