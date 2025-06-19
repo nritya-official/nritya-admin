@@ -38,31 +38,93 @@ const render = {
   STAGING: "https://nritya-official.github.io/nritya-webApp/",
 };
 
+// const initialData = {
+//   studioName: "",
+//   founderName: "",
+//   aboutStudio: "",
+//   aboutFounder: "",
+
+//   mobileNumber: "",
+//   mailAddress: "",
+//   whatsappNumber: "",
+
+//   danceStyles: [],
+//   maximumOccupancy: "",
+//   numberOfHalls: "",
+
+//   buildingName: "",
+//   landmark: "",
+//   street: "",
+//   pincode: "",
+//   city: "",
+//   state: "",
+//   country: "India",
+//   mapAddress: "",
+//   geolocation: {
+//     lat: null,
+//     lng: null,
+//   },
+
+//   gstNumber: "",
+//   addAmenities: [],
+//   enrollmentProcess: "",
+
+//   tableData: [
+//     {
+//       fee: "",
+//       freeTrial: "",
+//       className: "",
+//       time: "",
+//       days: [],
+//       danceForms: "",
+//       level: "",
+//       instructors: "",
+//       status: "",
+//       classCategory: [],
+//     },
+//   ],
+
+//   timings: {
+//     tuesday: [{ open: "09:00 AM", close: "06:00 PM" }],
+//     wednesday: [{ open: "09:00 AM", close: "06:00 PM" }],
+//     thursday: [{ open: "09:00 AM", close: "06:00 PM" }],
+//     friday: [{ open: "09:00 AM", close: "06:00 PM" }],
+//     saturday: [{ open: "09:00 AM", close: "06:00 PM" }],
+//     sunday: [{ open: "09:00 AM", close: "06:00 PM" }],
+//     monday: [{ open: "09:00 AM", close: "06:00 PM" }],
+//   },
+
+//   instagram: "",
+//   facebook: "",
+//   youtube: "",
+//   twitter: "",
+// };
+
 const initialData = {
-  studioName: "",
-  founderName: "",
-  aboutStudio: "",
-  aboutFounder: "",
+  studioName: "Test Studio Z25",
+  founderName: "Test Studio Z25",
+  aboutStudio: "Test Studio Z25",
+  aboutFounder: "Test Studio Z25",
 
-  mobileNumber: "",
+  mobileNumber: "1234567890",
   mailAddress: "",
-  whatsappNumber: "",
+  whatsappNumber: "1234567889",
 
-  danceStyles: [],
-  maximumOccupancy: "",
-  numberOfHalls: "",
+  danceStyles: ["Kuchipudi"],
+  maximumOccupancy: "123",
+  numberOfHalls: "2",
 
-  buildingName: "",
+  buildingName: "123",
   landmark: "",
-  street: "",
-  pincode: "",
-  city: "",
-  state: "",
+  street: "bhavna nagar",
+  pincode: "123465",
+  city: "Surat",
+  state: "Gujarat",
   country: "India",
-  mapAddress: "",
+  mapAddress: "Bhavnagar, Gujarat, India",
   geolocation: {
-    lat: null,
-    lng: null,
+    lat: 21.7644725,
+    lng: 72.15193040000001,
   },
 
   gstNumber: "",
@@ -71,16 +133,24 @@ const initialData = {
 
   tableData: [
     {
-      fee: "",
-      freeTrial: "",
-      className: "",
-      time: "",
-      days: [],
-      danceForms: "",
-      level: "",
-      instructors: "",
+      fee: "1230",
+      freeTrial: "false",
+      className: "test6",
+      time: "00:30 AM - 01:45 PM",
+      days: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ],
+      danceForms: "Kuchipudi",
+      level: "Beginner",
+      instructors: "Test - I0eeFtiF3a63nLjMj9z2",
       status: "",
-      classCategory: [],
+      classCategory: ["All Ages, Open to All"],
     },
   ],
 
@@ -89,15 +159,26 @@ const initialData = {
     wednesday: [{ open: "09:00 AM", close: "06:00 PM" }],
     thursday: [{ open: "09:00 AM", close: "06:00 PM" }],
     friday: [{ open: "09:00 AM", close: "06:00 PM" }],
-    saturday: [{ open: "09:00 AM", close: "06:00 PM" }],
+    saturday: [{ open: "Closed", close: "Closed" }],
     sunday: [{ open: "09:00 AM", close: "06:00 PM" }],
-    monday: [{ open: "09:00 AM", close: "06:00 PM" }],
+    monday: [{ open: "Closed", close: "Closed" }],
   },
 
   instagram: "",
   facebook: "",
   youtube: "",
   twitter: "",
+
+  // Additional fields from the provided data
+  creatorEmail: "zaidshaikh7567@gmail.com",
+  visibilty: 1,
+  status: "OPEN",
+  isPremium: true,
+  reviews: [],
+  instructorsNames: [],
+  author: "Zaid Shaikh",
+  UserId: "FX3PHeQZcDfnxTwhindYxqUsMy72",
+  enrolledId: [],
 };
 
 function StudioCrud() {
@@ -125,7 +206,9 @@ function StudioCrud() {
       searchUrl += `?creatorEmail=${searchQuery}`;
 
       try {
-        const response = await axios.get(`${baseUrlServer}crud/getUserDataByEmail/${searchQuery?.trim?.()}`);
+        const response = await axios.get(
+          `${baseUrlServer}crud/getUserDataByEmail/${searchQuery?.trim?.()}`
+        );
 
         if (Object.keys(response.data?.data || {}).length) {
           setUserDetails(response.data?.data ?? null);
@@ -178,27 +261,22 @@ function StudioCrud() {
     };
 
     try {
-      const response = await fetch(
-        `${baseUrlServer}n_admin/new_data/Studio/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formatedData),
-        }
-      );
+      const response = await fetch(`${baseUrlServer}n_admin/new_data/Studio/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formatedData),
+      });
 
       const data = await response.json();
       if (response.ok) {
-        console.log("Data pushed successfully:", data);
         alert("Studio added successfully!");
+        return data;
       } else {
-        console.error("Error pushing data:", data);
         alert("Failed to add. Check console for details.");
       }
     } catch (error) {
-      console.error("Push Error:", error);
       alert("Network error. Please try again.");
     }
   };
@@ -230,7 +308,6 @@ function StudioCrud() {
 
       const data = await response.json();
       if (response.ok) {
-        console.log("Data pushed successfully:", data);
         alert("Studio details updated successfully!");
       } else {
         console.error("Error pushing data:", data);
@@ -282,21 +359,22 @@ function StudioCrud() {
     setErrors({});
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (isUpdating) {
-      setIsUpdating(false);
-      await pushData(selectedStudio.id, "Studio");
-      setSelectedStudio(null);
-    } else {
-      await addData();
+  const handleSubmit = async (createStudioCallback) => {
+    try {
+      if (isUpdating) {
+        setIsUpdating(false);
+        await pushData(selectedStudio.id, "Studio");
+        setSelectedStudio(null);
+      } else {
+        const data = await addData();
+        await createStudioCallback(data?.document_id);
+      }
+    } finally {
+      setFormData(initialData);
+      setCurrentWindow(WINDOWS.DEFAULT);
+      setErrors({});
+      await handleSearch();
     }
-
-    setFormData(initialData);
-    setCurrentWindow(WINDOWS.DEFAULT);
-    setErrors({});
-    await handleSearch();
   };
 
   const changeSearchMode = (e) => {
@@ -305,22 +383,24 @@ function StudioCrud() {
     setCurrentWindow(WINDOWS.DEFAULT);
     setUserDetails(null);
     setResults([]);
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
   return (
     <>
       {(currentWindow === WINDOWS.ADD_STUDIO ||
         currentWindow === WINDOWS.UPDATE_STUDIO) && (
-          <AddStudio
-            isUpdating={isUpdating}
-            formData={formData}
-            setFormData={setFormData}
-            errors={errors}
-            onBack={handleBack}
-            onSubmit={handleSubmit}
-          />
-        )}
+        <AddStudio
+          entityId={selectedStudio?.id}
+          baseUrlServer={baseUrlServer}
+          isUpdating={isUpdating}
+          formData={formData}
+          setFormData={setFormData}
+          errors={errors}
+          onBack={handleBack}
+          onSubmit={handleSubmit}
+        />
+      )}
 
       {currentWindow === WINDOWS.DEFAULT && (
         <>
@@ -397,7 +477,7 @@ function StudioCrud() {
               {submitting ? "Searching..." : "Search"}
             </Button>
 
-            {(searchType === "EMAIL" && userDetails && isSubmited) && (
+            {searchType === "EMAIL" && userDetails && isSubmited && (
               <Box sx={{ display: "flex", justifyContent: "end", mt: 2 }}>
                 <Button
                   variant="text"

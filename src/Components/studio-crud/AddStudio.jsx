@@ -38,6 +38,7 @@ import danceStyles from "../../danceStyles.json";
 import cities from "../../cities.json";
 import states from "../../states.json";
 import StudioWeeklyTimings from "./StudioWeeklyTiming";
+import ImageUpload from "../ImageUplaod";
 
 const danceStylesOptions = danceStyles.danceStyles;
 
@@ -148,6 +149,8 @@ const TimeRangeModal = ({ open, onClose, value, onChange, index }) => {
 };
 
 const AddStudio = ({
+  entityId,
+  baseUrlServer,
   isUpdating,
   formData,
   setFormData,
@@ -156,6 +159,7 @@ const AddStudio = ({
   onBack,
 }) => {
   const mapRef = useRef();
+  const formRef = useRef();
   const autocompleteRef = useRef();
   const [mapCenter, setMapCenter] = useState(center);
   const [markerPosition, setMarkerPosition] = useState(null);
@@ -324,6 +328,18 @@ const AddStudio = ({
     });
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (entityId) {
+      await formRef.current.uploadImages();
+      await onSubmit();
+    } else {
+      await onSubmit(async (newlyCreatedEntityId) => {
+        await formRef.current.uploadImages(newlyCreatedEntityId);
+      });
+    }
+  };
+
   return (
     <Box sx={{ px: 3 }}>
       <Button variant="text" color="primary" onClick={onBack}>
@@ -331,7 +347,7 @@ const AddStudio = ({
       </Button>
 
       <LocalizationProvider dateAdapter={AdapterDayjs}>
-        <Box component="form" onSubmit={onSubmit} sx={{ my: 3 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ my: 3 }}>
           <Typography variant="h4" gutterBottom>
             {!isUpdating ? "Add New Studio" : "Update Studio"}
           </Typography>
@@ -1101,6 +1117,22 @@ const AddStudio = ({
                 />
               </Grid>
             </Grid>
+          </Paper>
+
+          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Image uploads
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+
+            <ImageUpload
+              ref={formRef}
+              baseApiUrl={baseUrlServer}
+              entityId={entityId}
+              title="Upload Studio Images"
+              min={0}
+              max={10}
+            />
           </Paper>
 
           <Box sx={{ textAlign: "right" }}>
