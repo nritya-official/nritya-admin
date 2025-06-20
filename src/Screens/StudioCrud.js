@@ -38,93 +38,31 @@ const render = {
   STAGING: "https://nritya-official.github.io/nritya-webApp/",
 };
 
-// const initialData = {
-//   studioName: "",
-//   founderName: "",
-//   aboutStudio: "",
-//   aboutFounder: "",
-
-//   mobileNumber: "",
-//   mailAddress: "",
-//   whatsappNumber: "",
-
-//   danceStyles: [],
-//   maximumOccupancy: "",
-//   numberOfHalls: "",
-
-//   buildingName: "",
-//   landmark: "",
-//   street: "",
-//   pincode: "",
-//   city: "",
-//   state: "",
-//   country: "India",
-//   mapAddress: "",
-//   geolocation: {
-//     lat: null,
-//     lng: null,
-//   },
-
-//   gstNumber: "",
-//   addAmenities: [],
-//   enrollmentProcess: "",
-
-//   tableData: [
-//     {
-//       fee: "",
-//       freeTrial: "",
-//       className: "",
-//       time: "",
-//       days: [],
-//       danceForms: "",
-//       level: "",
-//       instructors: "",
-//       status: "",
-//       classCategory: [],
-//     },
-//   ],
-
-//   timings: {
-//     tuesday: [{ open: "09:00 AM", close: "06:00 PM" }],
-//     wednesday: [{ open: "09:00 AM", close: "06:00 PM" }],
-//     thursday: [{ open: "09:00 AM", close: "06:00 PM" }],
-//     friday: [{ open: "09:00 AM", close: "06:00 PM" }],
-//     saturday: [{ open: "09:00 AM", close: "06:00 PM" }],
-//     sunday: [{ open: "09:00 AM", close: "06:00 PM" }],
-//     monday: [{ open: "09:00 AM", close: "06:00 PM" }],
-//   },
-
-//   instagram: "",
-//   facebook: "",
-//   youtube: "",
-//   twitter: "",
-// };
-
 const initialData = {
-  studioName: "Test Studio Z25",
-  founderName: "Test Studio Z25",
-  aboutStudio: "Test Studio Z25",
-  aboutFounder: "Test Studio Z25",
+  studioName: "",
+  founderName: "",
+  aboutStudio: "",
+  aboutFounder: "",
 
-  mobileNumber: "1234567890",
+  mobileNumber: "",
   mailAddress: "",
-  whatsappNumber: "1234567889",
+  whatsappNumber: "",
 
-  danceStyles: ["Kuchipudi"],
-  maximumOccupancy: "123",
-  numberOfHalls: "2",
+  danceStyles: [],
+  maximumOccupancy: "",
+  numberOfHalls: "",
 
-  buildingName: "123",
+  buildingName: "",
   landmark: "",
-  street: "bhavna nagar",
-  pincode: "123465",
-  city: "Surat",
-  state: "Gujarat",
+  street: "",
+  pincode: "",
+  city: "",
+  state: "",
   country: "India",
-  mapAddress: "Bhavnagar, Gujarat, India",
+  mapAddress: "",
   geolocation: {
-    lat: 21.7644725,
-    lng: 72.15193040000001,
+    lat: null,
+    lng: null,
   },
 
   gstNumber: "",
@@ -133,24 +71,16 @@ const initialData = {
 
   tableData: [
     {
-      fee: "1230",
-      freeTrial: "false",
-      className: "test6",
-      time: "00:30 AM - 01:45 PM",
-      days: [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-      ],
-      danceForms: "Kuchipudi",
-      level: "Beginner",
-      instructors: "Test - I0eeFtiF3a63nLjMj9z2",
+      fee: "",
+      freeTrial: "",
+      className: "",
+      time: "",
+      days: [],
+      danceForms: "",
+      level: "",
+      instructors: "",
       status: "",
-      classCategory: ["All Ages, Open to All"],
+      classCategory: [],
     },
   ],
 
@@ -159,26 +89,15 @@ const initialData = {
     wednesday: [{ open: "09:00 AM", close: "06:00 PM" }],
     thursday: [{ open: "09:00 AM", close: "06:00 PM" }],
     friday: [{ open: "09:00 AM", close: "06:00 PM" }],
-    saturday: [{ open: "Closed", close: "Closed" }],
+    saturday: [{ open: "09:00 AM", close: "06:00 PM" }],
     sunday: [{ open: "09:00 AM", close: "06:00 PM" }],
-    monday: [{ open: "Closed", close: "Closed" }],
+    monday: [{ open: "09:00 AM", close: "06:00 PM" }],
   },
 
   instagram: "",
   facebook: "",
   youtube: "",
   twitter: "",
-
-  // Additional fields from the provided data
-  creatorEmail: "zaidshaikh7567@gmail.com",
-  visibilty: 1,
-  status: "OPEN",
-  isPremium: true,
-  reviews: [],
-  instructorsNames: [],
-  author: "Zaid Shaikh",
-  UserId: "FX3PHeQZcDfnxTwhindYxqUsMy72",
-  enrolledId: [],
 };
 
 function StudioCrud() {

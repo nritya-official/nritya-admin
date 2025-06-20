@@ -38,7 +38,7 @@ import danceStyles from "../../danceStyles.json";
 import cities from "../../cities.json";
 import states from "../../states.json";
 import StudioWeeklyTimings from "./StudioWeeklyTiming";
-import ImageUpload from "../ImageUplaod";
+import ImageUpload from "../ImageUpload";
 
 const danceStylesOptions = danceStyles.danceStyles;
 
