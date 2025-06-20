@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/nritya-admin/static/css/main.0eed2383.css",
-    "main.js": "/nritya-admin/static/js/main.9addca06.js",
+    "main.js": "/nritya-admin/static/js/main.39b8bb3c.js",
     "static/js/239.b04b840a.chunk.js": "/nritya-admin/static/js/239.b04b840a.chunk.js",
     "static/js/213.dfacf77c.chunk.js": "/nritya-admin/static/js/213.dfacf77c.chunk.js",
     "static/js/732.f3a86ea9.chunk.js": "/nritya-admin/static/js/732.f3a86ea9.chunk.js",
@@ -9,7 +9,7 @@
     "static/media/logo.png": "/nritya-admin/static/media/logo.aacdd5500f6cc7277585.png",
     "index.html": "/nritya-admin/index.html",
     "main.0eed2383.css.map": "/nritya-admin/static/css/main.0eed2383.css.map",
-    "main.9addca06.js.map": "/nritya-admin/static/js/main.9addca06.js.map",
+    "main.39b8bb3c.js.map": "/nritya-admin/static/js/main.39b8bb3c.js.map",
     "239.b04b840a.chunk.js.map": "/nritya-admin/static/js/239.b04b840a.chunk.js.map",
     "213.dfacf77c.chunk.js.map": "/nritya-admin/static/js/213.dfacf77c.chunk.js.map",
     "732.f3a86ea9.chunk.js.map": "/nritya-admin/static/js/732.f3a86ea9.chunk.js.map",
@@ -17,6 +17,6 @@
   },
   "entrypoints": [
     "static/css/main.0eed2383.css",
-    "static/js/main.9addca06.js"
+    "static/js/main.39b8bb3c.js"
   ]
 }
