@@ -17,9 +17,18 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import axios from "axios";
 
+import ImageCropperDialog from "./ImageCropperDialog";
+
 const ImageUploader = forwardRef(
   (
-    { title = "Upload Images", min = 1, max = 5, baseApiUrl, entityId },
+    {
+      title = "Upload Images",
+      min = 1,
+      max = 5,
+      baseApiUrl,
+      entityId,
+      isCropRequired = false,
+    },
     ref
   ) => {
     const inputRef = useRef();
@@ -28,6 +37,10 @@ const ImageUploader = forwardRef(
     const [removedImages, setRemovedImages] = useState([]);
     const [newImages, setNewImages] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    const [cropDialogOpen, setCropDialogOpen] = useState(false);
+    const [cropImageUrl, setCropImageUrl] = useState(null);
+    const [selectedFile, setSelectedFile] = useState(null);
 
     useEffect(() => {
       const fetchImages = async () => {
@@ -66,17 +79,29 @@ const ImageUploader = forwardRef(
     const handleFileSelect = (event) => {
       const files = Array.from(event.target.files);
       const total = existingImages.length + newImages.length + files.length;
+
       if (total > max) {
         alert(`Maximum ${max} images allowed`);
         return;
       }
 
-      const imageObjs = files.map((file) => ({
-        file,
-        url: URL.createObjectURL(file),
-      }));
+      if (isCropRequired && max === 1 && files.length === 1) {
+        const file = files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          setSelectedFile(file);
+          setCropImageUrl(reader.result);
+          setCropDialogOpen(true);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const imageObjs = files.map((file) => ({
+          file,
+          url: URL.createObjectURL(file),
+        }));
+        setNewImages((prev) => [...prev, ...imageObjs]);
+      }
 
-      setNewImages((prev) => [...prev, ...imageObjs]);
       event.target.value = null;
     };
 
@@ -131,6 +156,11 @@ const ImageUploader = forwardRef(
           console.error("Failed to delete image:", removedImage, err);
         }
       }
+    };
+
+    const handleCropComplete = (croppedImage) => {
+      setNewImages([{ ...croppedImage }]);
+      setCropDialogOpen(false);
     };
 
     const totalCount = existingImages.length + newImages.length;
@@ -243,6 +273,14 @@ const ImageUploader = forwardRef(
             ))}
           </Grid>
         )}
+
+        <ImageCropperDialog
+          open={cropDialogOpen}
+          imageSrc={cropImageUrl}
+          filename={selectedFile?.name}
+          onClose={() => setCropDialogOpen(false)}
+          onCropComplete={handleCropComplete}
+        />
       </Box>
     );
   }

@@ -159,8 +159,12 @@ const AddStudio = ({
   onBack,
 }) => {
   const mapRef = useRef();
-  const formRef = useRef();
   const autocompleteRef = useRef();
+
+  const studioImageRef = useRef();
+  const logoImageRef = useRef();
+  const announcementImageRef = useRef();
+
   const [mapCenter, setMapCenter] = useState(center);
   const [markerPosition, setMarkerPosition] = useState(null);
 
@@ -331,11 +335,15 @@ const AddStudio = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (entityId) {
-      await formRef.current.uploadImages();
+      await studioImageRef.current.uploadImages();
+      await logoImageRef.current.uploadImages();
+      await announcementImageRef.current.uploadImages();
       await onSubmit();
     } else {
       await onSubmit(async (newlyCreatedEntityId) => {
-        await formRef.current.uploadImages(newlyCreatedEntityId);
+        await studioImageRef.current.uploadImages(newlyCreatedEntityId);
+        await logoImageRef.current.uploadImages(newlyCreatedEntityId);
+        await announcementImageRef.current.uploadImages(newlyCreatedEntityId);
       });
     }
   };
@@ -1121,17 +1129,51 @@ const AddStudio = ({
 
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
-              Image uploads
+              Studio Images
             </Typography>
             <Divider sx={{ mb: 2 }} />
 
             <ImageUpload
-              ref={formRef}
+              ref={studioImageRef}
+              imageType="studio"
               baseApiUrl={baseUrlServer}
               entityId={entityId}
               title="Upload Studio Images"
-              min={0}
+              min={1}
               max={10}
+            />
+          </Paper>
+
+          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Logo Image
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+
+            <ImageUpload
+              ref={logoImageRef}
+              baseApiUrl={baseUrlServer}
+              entityId={entityId}
+              title="Upload Logo"
+              min={1}
+              max={1}
+              isCropRequired
+            />
+          </Paper>
+
+          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Announcement Images
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+
+            <ImageUpload
+              ref={announcementImageRef}
+              baseApiUrl={baseUrlServer}
+              entityId={entityId}
+              title="Upload Announcement Images"
+              min={1}
+              max={5}
             />
           </Paper>
 
