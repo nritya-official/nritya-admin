@@ -335,15 +335,27 @@ const AddStudio = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (entityId) {
-      await studioImageRef.current.uploadImages();
-      await logoImageRef.current.uploadImages();
-      await announcementImageRef.current.uploadImages();
+      try {
+        await Promise.allSettled([
+          studioImageRef.current.uploadImages(),
+          logoImageRef.current.uploadImages(),
+          announcementImageRef.current.uploadImages(),
+        ]);
+      } catch (error) {
+        console.error("Image upload failed:", error);
+      }
       await onSubmit();
     } else {
       await onSubmit(async (newlyCreatedEntityId) => {
-        await studioImageRef.current.uploadImages(newlyCreatedEntityId);
-        await logoImageRef.current.uploadImages(newlyCreatedEntityId);
-        await announcementImageRef.current.uploadImages(newlyCreatedEntityId);
+        try {
+          await Promise.allSettled([
+            studioImageRef.current.uploadImages(newlyCreatedEntityId),
+            logoImageRef.current.uploadImages(newlyCreatedEntityId),
+            announcementImageRef.current.uploadImages(newlyCreatedEntityId),
+          ]);
+        } catch (error) {
+          console.error("Image upload failed:", error);
+        }
       });
     }
   };

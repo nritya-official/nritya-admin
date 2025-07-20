@@ -26,38 +26,56 @@ const ImageCropperDialog = ({
   };
 
   const getCroppedImg = async () => {
-    const image = new Image();
-    image.src = imageSrc;
-    await new Promise((res) => (image.onload = res));
+    try {
+      const image = new Image();
+      image.src = imageSrc;
+      await new Promise((res) => (image.onload = res));
 
-    const canvas = document.createElement("canvas");
-    canvas.width = croppedAreaPixels.width;
-    canvas.height = croppedAreaPixels.height;
-    const ctx = canvas.getContext("2d");
+      const canvas = document.createElement("canvas");
+      canvas.width = croppedAreaPixels.width;
+      canvas.height = croppedAreaPixels.height;
+      const ctx = canvas.getContext("2d");
 
-    ctx.drawImage(
-      image,
-      croppedAreaPixels.x,
-      croppedAreaPixels.y,
-      croppedAreaPixels.width,
-      croppedAreaPixels.height,
-      0,
-      0,
-      croppedAreaPixels.width,
-      croppedAreaPixels.height
-    );
+      if (!ctx) {
+        throw new Error("Failed to get canvas context");
+      }
 
-    return new Promise((resolve) => {
-      canvas.toBlob((blob) => {
-        const file = new File([blob], filename, { type: "image/jpeg" });
-        resolve({ file, url: URL.createObjectURL(file) });
-      }, "image/jpeg");
-    });
+      ctx.drawImage(
+        image,
+        croppedAreaPixels.x,
+        croppedAreaPixels.y,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height,
+        0,
+        0,
+        croppedAreaPixels.width,
+        croppedAreaPixels.height
+      );
+
+      return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error("Failed to create image blob"));
+            return;
+          }
+
+          const file = new File([blob], filename, { type: "image/jpeg" });
+          resolve({ file, url: URL.createObjectURL(file) });
+        }, "image/jpeg");
+      });
+    } catch (error) {
+      console.error("Error creating cropped image:", error);
+      throw error;
+    }
   };
 
   const handleCrop = async () => {
-    const cropped = await getCroppedImg();
-    handleFinalCrop(cropped);
+    try {
+      const cropped = await getCroppedImg();
+      handleFinalCrop(cropped);
+    } catch (error) {
+      console.error("Failed to crop image:", error);
+    }
   };
 
   return (
