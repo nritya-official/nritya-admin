@@ -731,19 +731,6 @@ const AddStudio = ({
               </Grid>
               <Grid item xs={12} md={6}>
                 <Typography variant="body1" gutterBottom>
-                  Enrollment Process
-                </Typography>
-                <TextField
-                  fullWidth
-                  name="enrollmentProcess"
-                  value={formData.enrollmentProcess}
-                  onChange={handleInputChange}
-                  error={errors?.enrollmentProcess}
-                  helperText={errors?.enrollmentProcess}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="body1" gutterBottom>
                   Add Amenities
                 </Typography>
                 <FormControl fullWidth error={errors?.addAmenities}>
@@ -769,6 +756,20 @@ const AddStudio = ({
                   </Select>
                   <FormHelperText>{errors?.addAmenities}</FormHelperText>
                 </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="body1" gutterBottom>
+                  Enrollment Process
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  name="enrollmentProcess"
+                  value={formData.enrollmentProcess}
+                  onChange={handleInputChange}
+                  error={errors?.enrollmentProcess}
+                  helperText={errors?.enrollmentProcess}
+                />
               </Grid>
             </Grid>
           </Paper>
