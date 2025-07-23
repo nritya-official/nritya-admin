@@ -23,6 +23,7 @@ const ImageUploader = forwardRef(
   (
     {
       title = "Upload Images",
+      imageType = "studio",
       min = 1,
       max = 5,
       baseApiUrl,
@@ -48,7 +49,7 @@ const ImageUploader = forwardRef(
         setLoading(true);
         try {
           const res = await axios.get(
-            `${baseApiUrl}api/studio/${entityId}/images/`
+            `${baseApiUrl}api/${imageType}/${entityId}/images/`
           );
           const urls = res.data?.StudioImages;
           setExistingImages(urls);
@@ -126,8 +127,8 @@ const ImageUploader = forwardRef(
       }
 
       const total = existingImages.length + newImages.length;
-      if (total < min) {
-        alert(`Minimum ${min} image(s) required`);
+      if (total > max) {
+        alert(`Maximum ${min} image(s) required`);
         return [];
       }
 

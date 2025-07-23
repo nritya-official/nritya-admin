@@ -1165,6 +1165,7 @@ const AddStudio = ({
 
             <ImageUpload
               ref={logoImageRef}
+              imageType="logo"
               baseApiUrl={baseUrlServer}
               entityId={entityId}
               title="Upload Logo"
@@ -1182,6 +1183,7 @@ const AddStudio = ({
 
             <ImageUpload
               ref={announcementImageRef}
+              imageType="announcements"
               baseApiUrl={baseUrlServer}
               entityId={entityId}
               title="Upload Announcement Images"
