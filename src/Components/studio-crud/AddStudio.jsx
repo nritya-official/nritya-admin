@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Box,
@@ -158,12 +159,26 @@ const AddStudio = ({
   onSubmit,
   onBack,
 }) => {
+  const imageApiMap = {
+    studio: {
+      upload: `${baseUrlServer}imagesCrud/studioImage/`,
+      delete: (id, name) =>
+        `${baseUrlServer}imagesCrud/studioImage/${id}/${name}/`,
+    },
+    logo: {
+      upload: `${baseUrlServer}imagesCrud/studioIcon/`,
+      delete: (id, name) =>
+        `${baseUrlServer}imagesCrud/studioIcon/${id}/${name}/`,
+    },
+    announcements: {
+      upload: `${baseUrlServer}imagesCrud/studioAnnouncement/`,
+      delete: (id, name) =>
+        `${baseUrlServer}imagesCrud/studioAnnouncement/${id}/${name}/`,
+    },
+  };
+
   const mapRef = useRef();
   const autocompleteRef = useRef();
-
-  const studioImageRef = useRef();
-  const logoImageRef = useRef();
-  const announcementImageRef = useRef();
 
   const [mapCenter, setMapCenter] = useState(center);
   const [markerPosition, setMarkerPosition] = useState(null);
@@ -171,6 +186,12 @@ const AddStudio = ({
   const [timePickerModal, setTimePickerModal] = useState({
     open: false,
     index: null,
+  });
+
+  const [images, setImages] = useState({
+    studio: { existing: [], new: [], removed: [] },
+    logo: { existing: [], new: [], removed: [] },
+    announcements: { existing: [], new: [], removed: [] },
   });
 
   const handleInputChange = (e) => {
@@ -332,33 +353,129 @@ const AddStudio = ({
     });
   };
 
+  const fetchImages = async () => {
+    if (!entityId) return;
+
+    try {
+      const res = await axios.get(
+        `${baseUrlServer}api/studio/${entityId}/images/`
+      );
+
+      setImages({
+        studio: {
+          existing: res?.data?.StudioImages || [],
+          new: [],
+          removed: [],
+        },
+        logo: { existing: res?.data?.StudioIcon || [], new: [], removed: [] },
+        announcements: {
+          existing: res?.data?.StudioAnnouncements || [],
+          new: [],
+          removed: [],
+        },
+      });
+    } catch (err) {
+      console.error("Failed to fetch images:", err);
+    }
+  };
+
+  const handleFileAdd = (type, files) => {
+    setImages((prev) => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        new: [...prev[type].new, ...files],
+      },
+    }));
+  };
+
+  const handleRemove = (type, index, isExisting) => {
+    setImages((prev) => {
+      const section = prev[type];
+      if (isExisting) {
+        const removed = section.existing[index];
+        return {
+          ...prev,
+          [type]: {
+            ...section,
+            existing: section.existing.filter((_, i) => i !== index),
+            removed: [...section.removed, removed],
+          },
+        };
+      } else {
+        const removed = section.new[index];
+        URL.revokeObjectURL(removed.url);
+        return {
+          ...prev,
+          [type]: {
+            ...section,
+            new: section.new.filter((_, i) => i !== index),
+          },
+        };
+      }
+    });
+  };
+
+  const extractFilename = (url) => {
+    try {
+      const path = new URL(url).pathname;
+      const parts = path.split("/");
+      return decodeURIComponent(parts[parts.length - 1]);
+    } catch {
+      return "";
+    }
+  };
+
+  const uploadImagesForType = async (type, id) => {
+    const { new: newImgs, removed: removedImgs } = images[type];
+    const { upload, delete: deleteUrlFn } = imageApiMap[type];
+
+    if (newImgs.length > 0) {
+      const formData = new FormData();
+      newImgs.forEach((img) => formData.append("images", img.file));
+      formData.append("entity_id", id);
+
+      try {
+        await axios.post(upload, formData);
+      } catch (err) {
+        console.error(`Failed to upload ${type} images:`, err);
+      }
+    }
+
+    for (const img of removedImgs) {
+      try {
+        const name = extractFilename(img);
+        await axios.delete(deleteUrlFn(id, encodeURIComponent(name)));
+      } catch (err) {
+        console.error(`Failed to delete ${type} image:`, img, err);
+      }
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const handleUploads = async (finalId) => {
+      await Promise.allSettled([
+        uploadImagesForType("studio", finalId),
+        uploadImagesForType("logo", finalId),
+        uploadImagesForType("announcements", finalId),
+      ]);
+    };
+
     if (entityId) {
-      try {
-        await Promise.allSettled([
-          studioImageRef.current.uploadImages(),
-          logoImageRef.current.uploadImages(),
-          announcementImageRef.current.uploadImages(),
-        ]);
-      } catch (error) {
-        console.error("Image upload failed:", error);
-      }
+      await handleUploads(entityId);
       await onSubmit();
     } else {
-      await onSubmit(async (newlyCreatedEntityId) => {
-        try {
-          await Promise.allSettled([
-            studioImageRef.current.uploadImages(newlyCreatedEntityId),
-            logoImageRef.current.uploadImages(newlyCreatedEntityId),
-            announcementImageRef.current.uploadImages(newlyCreatedEntityId),
-          ]);
-        } catch (error) {
-          console.error("Image upload failed:", error);
-        }
+      await onSubmit(async (newId) => {
+        await handleUploads(newId);
       });
     }
   };
+
+  useEffect(() => {
+    fetchImages();
+  }, [entityId]);
 
   return (
     <Box sx={{ px: 3 }}>
@@ -1145,14 +1262,14 @@ const AddStudio = ({
               Studio Images
             </Typography>
             <Divider sx={{ mb: 2 }} />
-
             <ImageUpload
-              ref={studioImageRef}
-              imageType="studio"
-              baseApiUrl={baseUrlServer}
-              entityId={entityId}
               title="Upload Studio Images"
-              min={1}
+              existingImages={images.studio.existing}
+              newImages={images.studio.new}
+              onFileAdd={(files) => handleFileAdd("studio", files)}
+              onRemove={(index, isExisting) =>
+                handleRemove("studio", index, isExisting)
+              }
               max={10}
             />
           </Paper>
@@ -1162,16 +1279,15 @@ const AddStudio = ({
               Logo Image
             </Typography>
             <Divider sx={{ mb: 2 }} />
-
             <ImageUpload
-              ref={logoImageRef}
-              imageType="logo"
-              baseApiUrl={baseUrlServer}
-              entityId={entityId}
               title="Upload Logo"
-              min={1}
+              existingImages={images.logo.existing}
+              newImages={images.logo.new}
+              onFileAdd={(files) => handleFileAdd("logo", files)}
+              onRemove={(index, isExisting) =>
+                handleRemove("logo", index, isExisting)
+              }
               max={1}
-              isCropRequired
             />
           </Paper>
 
@@ -1180,14 +1296,14 @@ const AddStudio = ({
               Announcement Images
             </Typography>
             <Divider sx={{ mb: 2 }} />
-
             <ImageUpload
-              ref={announcementImageRef}
-              imageType="announcements"
-              baseApiUrl={baseUrlServer}
-              entityId={entityId}
               title="Upload Announcement Images"
-              min={1}
+              existingImages={images.announcements.existing}
+              newImages={images.announcements.new}
+              onFileAdd={(files) => handleFileAdd("announcements", files)}
+              onRemove={(index, isExisting) =>
+                handleRemove("announcements", index, isExisting)
+              }
               max={5}
             />
           </Paper>
