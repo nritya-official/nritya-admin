@@ -32,6 +32,7 @@ import {
   Email as EmailIcon,
   LocationOn as LocationIcon,
   FilterList as FilterIcon,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
 import axios from "axios";
 import WorkshopForm from "../Components/workshop-crud/WorkshopForm";
@@ -511,6 +512,37 @@ function WorkshopCrud() {
     }
   };
 
+  const handleExportJson = async (workshop) => {
+    try {
+      const response = await fetch(`${baseUrlServer}crud/get_workshop_by_id/${workshop.workshop_id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const workshopData = await response.json();
+        
+        // Create and download JSON file
+        const dataStr = JSON.stringify(workshopData, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        
+        const exportFileDefaultName = `workshop_${workshop.workshop_id}_${workshop.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`;
+        
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+      } else {
+        alert("Failed to fetch workshop data for export.");
+      }
+    } catch (error) {
+      console.error("Error exporting workshop", error);
+      alert("Failed to export workshop data.");
+    }
+  };
+
   return (
     <>
       {(currentWindow === WINDOWS.ADD_WORKSHOP ||
@@ -867,7 +899,7 @@ function WorkshopCrud() {
                               <Button
                                 variant="text"
                                 size="small"
-                                disabled={!getDraftStatus(workshop.creation_time).isDraftActive}
+                                //disabled={!getDraftStatus(workshop.creation_time).isDraftActive}
                                 onClick={() => handleWorkshopClick(workshop)}
                                 sx={{ 
                                   fontSize: "12px", 
@@ -905,6 +937,26 @@ function WorkshopCrud() {
                                 }}
                               >
                                 Delete
+                              </Button>
+                            </Tooltip>
+                            <Tooltip title="Export workshop data as JSON">
+                              <Button
+                                variant="text"
+                                size="small"
+                                onClick={() => handleExportJson(workshop)}
+                                sx={{ 
+                                  fontSize: "12px", 
+                                  py: 0, 
+                                  bgcolor: "#28a745",
+                                  color: "white",
+                                  textTransform: "capitalize",
+                                  '&:hover': { 
+                                    bgcolor: "#28a745", 
+                                    color: "white"
+                                  }
+                                }}
+                              >
+                                Export
                               </Button>
                             </Tooltip>
                           </Stack>
