@@ -1,5 +1,5 @@
-import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
+import StudioImageService from "../../services/studioImageService";
 import {
   Box,
   Button,
@@ -159,24 +159,6 @@ const AddStudio = ({
   onSubmit,
   onBack,
 }) => {
-  const imageApiMap = {
-    studio: {
-      upload: `${baseUrlServer}imagesCrud/studioImage/`,
-      delete: (id, name) =>
-        `${baseUrlServer}imagesCrud/studioImage/${id}/${name}/`,
-    },
-    logo: {
-      upload: `${baseUrlServer}imagesCrud/studioIcon/`,
-      delete: (id, name) =>
-        `${baseUrlServer}imagesCrud/studioIcon/${id}/${name}/`,
-    },
-    announcements: {
-      upload: `${baseUrlServer}imagesCrud/studioAnnouncement/`,
-      delete: (id, name) =>
-        `${baseUrlServer}imagesCrud/studioAnnouncement/${id}/${name}/`,
-    },
-  };
-
   const mapRef = useRef();
   const autocompleteRef = useRef();
 
@@ -357,25 +339,36 @@ const AddStudio = ({
     if (!entityId) return;
 
     try {
-      const res = await axios.get(
-        `${baseUrlServer}api/studio/${entityId}/images/`
-      );
+      const [studioImages, logoImages, announcementImages] = await Promise.allSettled([
+        StudioImageService.loadStudioImages(baseUrlServer, entityId),
+        StudioImageService.loadStudioLogo(baseUrlServer, entityId),
+        StudioImageService.loadStudioAnnouncements(baseUrlServer, entityId)
+      ]);
 
       setImages({
         studio: {
-          existing: res?.data?.StudioImages || [],
+          existing: studioImages.status === 'fulfilled' ? studioImages.value : [],
           new: [],
           removed: [],
         },
-        logo: { existing: res?.data?.StudioIcon || [], new: [], removed: [] },
+        logo: { 
+          existing: logoImages.status === 'fulfilled' ? logoImages.value : [], 
+          new: [], 
+          removed: [] 
+        },
         announcements: {
-          existing: res?.data?.StudioAnnouncements || [],
+          existing: announcementImages.status === 'fulfilled' ? announcementImages.value : [],
           new: [],
           removed: [],
         },
       });
     } catch (err) {
       console.error("Failed to fetch images:", err);
+      setImages({
+        studio: { existing: [], new: [], removed: [] },
+        logo: { existing: [], new: [], removed: [] },
+        announcements: { existing: [], new: [], removed: [] },
+      });
     }
   };
 
@@ -428,15 +421,26 @@ const AddStudio = ({
 
   const uploadImagesForType = async (type, id) => {
     const { new: newImgs, removed: removedImgs } = images[type];
-    const { upload, delete: deleteUrlFn } = imageApiMap[type];
-
+    
     if (newImgs.length > 0) {
-      const formData = new FormData();
-      newImgs.forEach((img) => formData.append("images", img.file));
-      formData.append("entity_id", id);
-
       try {
-        await axios.post(upload, formData);
+        const files = newImgs.map(img => img.file);
+        
+        switch (type) {
+          case 'studio':
+            await StudioImageService.addStudioImages(baseUrlServer, id, files);
+            break;
+          case 'logo':
+            if (files.length > 0) {
+              await StudioImageService.updateStudioLogo(baseUrlServer, id, files[0]);
+            }
+            break;
+          case 'announcements':
+            await StudioImageService.addStudioAnnouncements(baseUrlServer, id, files);
+            break;
+          default:
+            console.warn(`Unknown image type: ${type}`);
+        }
       } catch (err) {
         console.error(`Failed to upload ${type} images:`, err);
       }
@@ -445,7 +449,20 @@ const AddStudio = ({
     for (const img of removedImgs) {
       try {
         const name = extractFilename(img);
-        await axios.delete(deleteUrlFn(id, encodeURIComponent(name)));
+        
+        switch (type) {
+          case 'studio':
+            await StudioImageService.removeStudioImage(baseUrlServer, id, name);
+            break;
+          case 'logo':
+            await StudioImageService.removeStudioLogo(baseUrlServer, id, name);
+            break;
+          case 'announcements':
+            await StudioImageService.removeStudioAnnouncement(baseUrlServer, id, name);
+            break;
+          default:
+            console.warn(`Unknown image type: ${type}`);
+        }
       } catch (err) {
         console.error(`Failed to delete ${type} image:`, img, err);
       }
