@@ -36,38 +36,20 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import Header from "../Header";
+import danceStylesData from "../../danceStyles.json";
+import citiesData from "../../cities.json";
+import statesData from "../../states.json";
 
 const FORM_FIELD_HEIGHT = 56;
 
-// Mock data for dance styles and cities
-const danceStylesOptions = [
-  "Bharatanatyam", "Kathak", "Odissi", "Kuchipudi", "Manipuri", "Mohiniyattam", "Sattriya",
-  "Contemporary", "Hip Hop", "Jazz", "Ballet", "Salsa", "Bachata", "Tango", "Waltz",
-  "Bollywood", "Folk Dance", "Classical", "Modern", "Fusion"
-];
+// Dance styles fetched from JSON file
+const danceStylesOptions = danceStylesData.danceStyles;
 
-const cityOptions = [
-  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad",
-  "Jaipur", "Surat", "Lucknow", "Kanpur", "Nagpur", "Indore", "Thane", "Bhopal",
-  "Visakhapatnam", "Pimpri-Chinchwad", "Patna", "Vadodara", "Ghaziabad", "Ludhiana",
-  "Agra", "Nashik", "Faridabad", "Meerut", "Rajkot", "Kalyan-Dombivali", "Vasai-Virar",
-  "Varanasi", "Srinagar", "Aurangabad", "Navi Mumbai", "Solapur", "Vijayawada", "Kolhapur",
-  "Amritsar", "Nashik", "Sangli", "Malegaon", "Ulhasnagar", "Jalgaon", "Akola", "Latur",
-  "Ahmadnagar", "Dhule", "Ichalkaranji", "Parbhani", "Jalna", "Bhusawal", "Panvel",
-  "Satara", "Beed", "Yavatmal", "Kamptee", "Gondia", "Barshi", "Achalpur", "Osmanabad",
-  "Nanded-Waghala", "Sangli-Miraj & Kupwad", "Malegaon", "Lonavla", "Deolali", "Chalisgaon",
-  "Bhiwandi", "Jalgaon", "Amalner", "Dhule", "Ichalkaranji", "Parbhani", "Jalna", "Bhusawal"
-];
+// Cities fetched from JSON file
+const cityOptions = citiesData.cities;
 
-const stateOptions = [
-  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
-  "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
-  "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
-  "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
-  "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh",
-  "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh",
-  "Lakshadweep", "Puducherry"
-];
+// States fetched from JSON file
+const stateOptions = statesData.states;
 
 // Updated LEVELS to use numbers mapped to strings
 const LEVELS = {
@@ -479,7 +461,6 @@ const WorkshopForm = ({
         geolocation: formData.geolocation || "",
         map_address: formData.mapAddress || "",
       };
-
       const transformedVariants = formData.variants.map((variant, index) => ({
         variant_id: `NEW_${index + 1}`,
         date: variant.date ? dayjs(variant.date).format("YYYY-MM-DD") : "",
