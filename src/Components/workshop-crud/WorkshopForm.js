@@ -24,6 +24,7 @@ import {
   CloudUpload,
   YouTube,
   Image,
+  Upload,
 } from "@mui/icons-material";
 import { BASEURL_PROD } from "../../constants";
 import ReactQuill from "react-quill";
@@ -161,6 +162,68 @@ const WorkshopForm = ({
   const [studios, setStudios] = useState([]);
   const [loadingStudios, setLoadingStudios] = useState(false);
   const [isCreatorEmailValid, setIsCreatorEmailValid] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+
+  // Handle JSON import
+  const handleImportJson = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const jsonData = JSON.parse(e.target.result);
+        console.log("Imported JSON data:", jsonData);
+        
+        // Map JSON data to formData structure
+        const importedFormData = {
+          name: jsonData.name || "",
+          description: jsonData.description || "",
+          dance_styles: jsonData.dance_styles ? jsonData.dance_styles.split(", ") : [],
+          youtube_link: jsonData.youtube_link || "",
+          level: jsonData.level || 0,
+          start_date: jsonData.start_date || "",
+          end_date: jsonData.end_date || "",
+          building: jsonData.building || "",
+          street: jsonData.street || "",
+          city: jsonData.city || "",
+          landmark: jsonData.landmark || "",
+          geolocation: jsonData.geolocation || "",
+          map_address: jsonData.map_address || "",
+          // Map variants
+          variants: jsonData.variants ? jsonData.variants.map(variant => ({
+            variant_id: variant.variant_id || "",
+            date: variant.date || "",
+            startTime: variant.time ? variant.time.split('-')[0] : "",
+            endTime: variant.time ? variant.time.split('-')[1] : "",
+            description: variant.description || "",
+            subvariants: variant.subvariants ? variant.subvariants.map(sub => ({
+              subvariant_id: sub.subvariant_id || "",
+              price: sub.price || 0,
+              capacity: sub.capacity || 0,
+              description: sub.description || "",
+              current_bookings: sub.current_bookings || 0
+            })) : []
+          })) : []
+        };
+
+        // Update formData with imported data
+        setFormData(prev => ({
+          ...prev,
+          ...importedFormData
+        }));
+
+        alert("Workshop data imported successfully!");
+        
+      } catch (error) {
+        console.error("Error parsing JSON:", error);
+        alert("Error importing JSON file. Please check the file format.");
+      }
+    };
+    
+    reader.readAsText(file);
+    setImportFile(file);
+  };
 
   useEffect(() => {
     if (isUpdating && formData) {
@@ -597,6 +660,49 @@ const WorkshopForm = ({
               <CloseOutlined />
             </IconButton>
           </Box>
+
+          {/* Import JSON Section */}
+          {!isUpdating && (
+            <Box
+              sx={{
+                mb: 3,
+                p: 2,
+                border: "1px dashed #ccc",
+                borderRadius: 2,
+                backgroundColor: "#f9f9f9",
+              }}
+            >
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Upload color="primary" />
+                <Typography variant="body2" color="text.secondary">
+                  Import workshop data from exported JSON file:
+                </Typography>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportJson}
+                  style={{ display: "none" }}
+                  id="import-json-input"
+                />
+                <label htmlFor="import-json-input">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    startIcon={<Upload />}
+                    size="small"
+                    sx={{ textTransform: "none" }}
+                  >
+                    Choose JSON File
+                  </Button>
+                </label>
+                {importFile && (
+                  <Typography variant="caption" color="success.main">
+                    ✓ {importFile.name}
+                  </Typography>
+                )}
+              </Stack>
+            </Box>
+          )}
 
           <Paper
             elevation={2}

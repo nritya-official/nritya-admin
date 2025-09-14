@@ -24,8 +24,11 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Divider,
-  IconButton,
   Autocomplete,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -137,6 +140,11 @@ function WorkshopCrud() {
 
   const [formData, setFormData] = useState(initialData);
   const [errors, setErrors] = useState({});
+  
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [workshopToDelete, setWorkshopToDelete] = useState(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
 
   const handleSearch = async () => {
     let searchUrl = `${baseUrlServer}crud/get_workshops_by_creator/`;
@@ -487,13 +495,22 @@ function WorkshopCrud() {
     setCreatorSearchStatus("UPCOMING"); // Reset creator search status
   };
 
-  const handleDelete = async (workshop) => {
-    if (!confirm(`Are you sure you want to delete "${workshop.name}"?`)) {
+  const handleDelete = (workshop) => {
+    setWorkshopToDelete(workshop);
+    setDeleteConfirmationText("");
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmationText !== "DELETE") {
+      alert("Please type 'DELETE' to confirm deletion.");
       return;
     }
 
+    if (!workshopToDelete) return;
+
     try {
-      const response = await fetch(`${baseUrlServer}crud/delete_workshop/${workshop.workshop_id}`, {
+      const response = await fetch(`${baseUrlServer}crud/delete_workshop/${workshopToDelete.workshop_id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -509,7 +526,17 @@ function WorkshopCrud() {
     } catch (error) {
       console.error("Error deleting workshop", error);
       alert("Failed to delete workshop.");
+    } finally {
+      setDeleteDialogOpen(false);
+      setWorkshopToDelete(null);
+      setDeleteConfirmationText("");
     }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setWorkshopToDelete(null);
+    setDeleteConfirmationText("");
   };
 
   const handleExportJson = async (workshop) => {
@@ -940,24 +967,24 @@ function WorkshopCrud() {
                               </Button>
                             </Tooltip>
                             <Tooltip title="Export workshop data as JSON">
-                              <Button
-                                variant="text"
-                                size="small"
+                              <DownloadIcon
+                     
+                                
                                 onClick={() => handleExportJson(workshop)}
                                 sx={{ 
-                                  fontSize: "12px", 
+                                  
                                   py: 0, 
-                                  bgcolor: "#28a745",
+                                  bgcolor: "#735a8b",
                                   color: "white",
-                                  textTransform: "capitalize",
+                                  cursor: "pointer",
                                   '&:hover': { 
                                     bgcolor: "#28a745", 
                                     color: "white"
                                   }
                                 }}
                               >
-                                Export
-                              </Button>
+                            
+                              </DownloadIcon>
                             </Tooltip>
                           </Stack>
                         </TableCell>
@@ -971,6 +998,78 @@ function WorkshopCrud() {
           </Box>
         </>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: "#dc3545", fontWeight: 600 }}>
+          Confirm Workshop Deletion
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete the workshop:
+          </Typography>
+          <Typography variant="h6" sx={{ mb: 3, color: "#dc3545", fontWeight: 600 }}>
+            "{workshopToDelete?.name}"
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, color: "#666" }}>
+            This action cannot be undone. All workshop data, bookings, and related information will be permanently deleted.
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, fontWeight: 600 }}>
+            To confirm deletion, please type <strong>DELETE</strong> in the box below:
+          </Typography>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Type DELETE to confirm"
+            value={deleteConfirmationText}
+            onChange={(e) => setDeleteConfirmationText(e.target.value)}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "&:hover fieldset": {
+                  borderColor: "#dc3545",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "#dc3545",
+                },
+              },
+            }}
+            autoFocus
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, gap: 1 }}>
+          <Button
+            onClick={handleCancelDelete}
+            variant="outlined"
+            sx={{ textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="contained"
+            disabled={deleteConfirmationText !== "DELETE"}
+            sx={{
+              bgcolor: "#dc3545",
+              color: "white",
+              textTransform: "none",
+              "&:hover": {
+                bgcolor: "#c82333",
+              },
+              "&.Mui-disabled": {
+                bgcolor: "#6c757d",
+                color: "white",
+              },
+            }}
+          >
+            Delete Workshop
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
