@@ -695,7 +695,6 @@ const AddStudio = ({
                 </Typography>
                 <TextField
                   fullWidth
-                  type="number"
                   name="buildingName"
                   value={formData.buildingName}
                   onChange={handleInputChange}
