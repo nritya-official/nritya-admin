@@ -39,6 +39,7 @@ import {
 } from "@mui/icons-material";
 import axios from "axios";
 import WorkshopForm from "../Components/workshop-crud/WorkshopForm";
+import WorkshopRevenueTable from "./WorkshopRevenueTable";
 import { BASEURL_PROD } from "../constants";
 import citiesData from "../cities.json";
 
@@ -46,6 +47,7 @@ const WINDOWS = {
   DEFAULT: "default",
   ADD_WORKSHOP: "addWorkshop",
   UPDATE_WORKSHOP: "updateWorkshop",
+  WORKSHOP_REVENUE: "workshopRevenue",
 };
 const local = "http://0.0.0.0:8000/"
 // Mode URLs
@@ -570,6 +572,12 @@ function WorkshopCrud() {
     }
   };
 
+  const handleRevenue = (workshop) => {
+    // Set the selected workshop for revenue display
+    setSelectedWorkshop(workshop);
+    setCurrentWindow('WORKSHOP_REVENUE');
+  };
+
   return (
     <>
       {(currentWindow === WINDOWS.ADD_WORKSHOP ||
@@ -584,6 +592,24 @@ function WorkshopCrud() {
           onBack={handleBack}
           onSubmit={handleSubmit}
         />
+      )}
+
+      {currentWindow === WINDOWS.WORKSHOP_REVENUE && (
+        <Box sx={{ p: 3 }}>
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={() => setCurrentWindow(WINDOWS.DEFAULT)}
+              sx={{ minWidth: '100px' }}
+            >
+              ← Back
+            </Button>
+            <Typography variant="h5" sx={{ textTransform: 'none' }}>
+              Workshop Revenue: {selectedWorkshop?.name || 'Loading...'}
+            </Typography>
+          </Box>
+          <WorkshopRevenueTable workshopId={selectedWorkshop?.workshop_id} />
+        </Box>
       )}
 
       {currentWindow === WINDOWS.DEFAULT && (
@@ -964,6 +990,27 @@ function WorkshopCrud() {
                                 }}
                               >
                                 Delete
+                              </Button>
+                            </Tooltip>
+                            <Tooltip>
+                              <Button
+                                variant="text"
+                                size="small"
+                                onClick={() => handleRevenue(workshop)}
+                                sx={{ 
+                                  fontSize: "12px", 
+                                  py: 0, 
+                                  bgcolor: "#dc3545",
+                                  color: "white",
+                                  textTransform: "capitalize",
+                                  '&:hover': { 
+                                    bgcolor: "#dc3545", 
+                                    color: "white"
+                                  }, 
+                                  '&:disabled': { color: 'lightgray' } 
+                                }}
+                              >
+                                Revenue
                               </Button>
                             </Tooltip>
                             <Tooltip title="Export workshop data as JSON">

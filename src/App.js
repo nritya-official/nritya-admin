@@ -21,6 +21,7 @@ import Instructors from "./Screens/Instructors";
 import StudioCrud from "./Screens/StudioCrud";
 import WorkshopCrud from "./Screens/WorkshopCrud";
 import AdminMgmt from "./Screens/AdminMgmt";
+import Tickets from "./Screens/Tickets";
 import { ProtectedRoutes, ProtectedRoles } from "./utils/ProtectedRoutes";
 import CarouselImgMgmt from "./Screens/CarouselImgMgmt";
 import Data from "./Screens/Data";
@@ -30,6 +31,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import UserKycsNew from "./Screens/UserKycsNew";
 import Loader from "./Components/Loader";
+import PageTracking from "./Screens/PageTracking";
 
 const darkTheme = createTheme({
   palette: {
@@ -60,8 +62,10 @@ function App() {
                 <Route path="/studios" element={<Studios />} />
                 <Route path="/workshops" element={<Workshops />} />
                 <Route path="/bookings" element={<Bookings />} />
+                <Route path="/tickets" element={<Tickets />} />
                 <Route path="/instructors" element={<Instructors />} />
                 <Route path="/carouselImgMgmt" element={<CarouselImgMgmt />} />
+                <Route path="/pageTracking" element={<PageTracking />} />
                 <Route element={<ProtectedRoles roleInput={1} />}>
                   <Route path="/adminMgmt" element={<AdminMgmt />} />
                   <Route path="/data" element={<Data />} />
