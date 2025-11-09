@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   TextField,
   Button,
@@ -115,6 +115,7 @@ const WorkshopForm = ({
   onSubmit 
 }) => {
   const [step, setStep] = useState(1);
+  const hasInitializedStudio = useRef(false);
 
   // Add logging to see what formData is received
   useEffect(() => {
@@ -225,24 +226,25 @@ const WorkshopForm = ({
     setImportFile(file);
   };
 
+  // Initialize studio association and video link only once when editing
   useEffect(() => {
-    if (isUpdating && formData) {
+    if (isUpdating && formData && formData.studio_association && !hasInitializedStudio.current) {
       // If editing existing workshop, check if it has a video link
       if (formData.youtube_link) {
         setIsVideoLink(true);
       }
       
       // Handle studioAssociation for existing workshops
-      if (formData.studio_association) {
-        const studioId = formData.studio_association.split('-')[0];
-        setFormData((prev) => ({
-          ...prev,
-          studio: studioId,
-          venueType: "Studio",
-        }));
-      }
+      const studioId = formData.studio_association.split('-')[0];
+      setFormData((prev) => ({
+        ...prev,
+        studio: studioId,
+        venueType: "Studio",
+      }));
+      
+      hasInitializedStudio.current = true; // Mark as initialized to prevent re-runs
     }
-  }, [isUpdating, formData]);
+  }, [isUpdating, formData, setFormData]);
 
   // Handle studio selection when studios are loaded and we have a studioAssociation
   useEffect(() => {
@@ -525,12 +527,14 @@ const WorkshopForm = ({
         map_address: formData.mapAddress || "",
       };
       const transformedVariants = formData.variants.map((variant, index) => ({
-        variant_id: `NEW_${index + 1}`,
+        // Use existing variant_id when updating, generate NEW only when creating
+        variant_id: variant.variant_id || `NEW_${index + 1}`,
         date: variant.date ? dayjs(variant.date).format("YYYY-MM-DD") : "",
         time: variant.startTime && variant.endTime ? `${variant.startTime}-${variant.endTime}` : "",
         description: variant.description,
         subvariants: variant.subvariants.map((sub, pIndex) => ({
-          subvariant_id: `NEW_${index}_${pIndex + 1}`,
+          // Use existing subvariant_id when updating, generate NEW only when creating
+          subvariant_id: sub.subvariant_id || `NEW_${index}_${pIndex + 1}`,
           price: sub.price,
           capacity: sub.capacity,
           description: sub.description,
@@ -544,6 +548,7 @@ const WorkshopForm = ({
 
       let response;
       let workshopId;
+      console.log("AR_ payload", payload , "v/s", formData);
 
       if (isUpdating) {
         response = await fetch(

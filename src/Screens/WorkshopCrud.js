@@ -897,8 +897,8 @@ function WorkshopCrud() {
                   <TableBody>
                     {results.map((workshop, index) => {
                       // Add logging for each workshop row
-                      console.log(`=== WORKSHOP ${index} TABLE DISPLAY DEBUG ===`);
-                      console.log("Workshop data:", workshop);
+                      //console.log(`=== WORKSHOP ${index} TABLE DISPLAY DEBUG ===`);
+                      //console.log("Workshop data:", workshop);
                       console.log("Creator email values:", {
                         creator_email: workshop.creator_email,
                         creatorEmail: workshop.creatorEmail,
@@ -917,7 +917,8 @@ function WorkshopCrud() {
                         <TableRow key={index}>
                           <TableCell>
                             <a
-                              href={`${baseUrlRender}#/workshop/${workshop.workshop_id}`}
+                             target="_blank"
+                              href={`${baseUrlRender}/workshop/${workshop.workshop_id}`}
                               style={{ textDecoration: "none", color: "inherit" }}
                               onClick={(e) => e.stopPropagation()}
                             >
@@ -952,7 +953,7 @@ function WorkshopCrud() {
                               <Button
                                 variant="text"
                                 size="small"
-                                //disabled={!getDraftStatus(workshop.creation_time).isDraftActive}
+                                disabled={!getDraftStatus(workshop.creation_time).isDraftActive}
                                 onClick={() => handleWorkshopClick(workshop)}
                                 sx={{ 
                                   fontSize: "12px", 
@@ -974,7 +975,7 @@ function WorkshopCrud() {
                               <Button
                                 variant="text"
                                 size="small"
-                                disabled={!getDraftStatus(workshop.creation_time).isDraftActive}
+                                //disabled={!getDraftStatus(workshop.creation_time).isDraftActive}
                                 onClick={() => handleDelete(workshop)}
                                 sx={{ 
                                   fontSize: "12px", 
