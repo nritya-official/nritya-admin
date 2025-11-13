@@ -300,6 +300,15 @@ function WorkshopCrud() {
         price: sub.price || "",
         capacity: sub.capacity || "",
         description: sub.description || "",
+        is_time_sensitive: !!sub.is_time_sensitive,
+        time_sensitive_date:
+          sub.is_time_sensitive && sub.time_sensitive_date
+            ? sub.time_sensitive_date
+            : null,
+        time_sensitive_time:
+          sub.is_time_sensitive && sub.time_sensitive_time
+            ? sub.time_sensitive_time
+            : null,
       })),
     }));
 
@@ -358,6 +367,15 @@ function WorkshopCrud() {
         price: sub.price || "",
         capacity: sub.capacity || "",
         description: sub.description || "",
+        is_time_sensitive: !!sub.is_time_sensitive,
+        time_sensitive_date:
+          sub.is_time_sensitive && sub.time_sensitive_date
+            ? sub.time_sensitive_date
+            : null,
+        time_sensitive_time:
+          sub.is_time_sensitive && sub.time_sensitive_time
+            ? sub.time_sensitive_time
+            : null,
       })),
     }));
 
@@ -441,10 +459,26 @@ function WorkshopCrud() {
               price: "",
               capacity: "",
               description: "",
+              is_time_sensitive: false,
+              time_sensitive_date: null,
+              time_sensitive_time: null,
             },
           ],
         },
       ];
+
+      formatedData.variants = formatedData.variants.map((variant) => ({
+        ...variant,
+        subvariants: (variant.subvariants || []).map((sub) => ({
+          ...sub,
+          time_sensitive_date: sub.time_sensitive_date || null,
+          time_sensitive_time: sub.time_sensitive_time || null,
+          is_time_sensitive:
+            sub.is_time_sensitive !== undefined
+              ? sub.is_time_sensitive
+              : !!(sub.time_sensitive_date || sub.time_sensitive_time),
+        })),
+      }));
 
       return formatedData;
     });

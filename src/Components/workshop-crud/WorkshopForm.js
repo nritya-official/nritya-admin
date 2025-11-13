@@ -92,6 +92,9 @@ const initialValue = {
           price: "",
           capacity: "",
           description: "",
+          is_time_sensitive: false,
+          time_sensitive_date: null,
+          time_sensitive_time: null,
         },
       ],
     },
@@ -203,7 +206,12 @@ const WorkshopForm = ({
               price: sub.price || 0,
               capacity: sub.capacity || 0,
               description: sub.description || "",
-              current_bookings: sub.current_bookings || 0
+              current_bookings: sub.current_bookings || 0,
+              time_sensitive_date: sub.time_sensitive_date || null,
+              time_sensitive_time: sub.time_sensitive_time || null,
+              is_time_sensitive: sub.is_time_sensitive !== undefined
+                ? sub.is_time_sensitive
+                : !!(sub.time_sensitive_date || sub.time_sensitive_time)
             })) : []
           })) : []
         };
@@ -466,6 +474,12 @@ const WorkshopForm = ({
           if (!subvariant.price || !subvariant.capacity || !subvariant.description) {
             return false;
           }
+          if (
+            subvariant.is_time_sensitive &&
+            (!subvariant.time_sensitive_date || !subvariant.time_sensitive_time)
+          ) {
+            return false;
+          }
         }
       }
 
@@ -538,6 +552,15 @@ const WorkshopForm = ({
           price: sub.price,
           capacity: sub.capacity,
           description: sub.description,
+          is_time_sensitive: !!sub.is_time_sensitive,
+          time_sensitive_date:
+            sub.is_time_sensitive && sub.time_sensitive_date
+              ? dayjs(sub.time_sensitive_date).format("YYYY-MM-DD")
+              : null,
+          time_sensitive_time:
+            sub.is_time_sensitive && sub.time_sensitive_time
+              ? sub.time_sensitive_time
+              : null,
         })),
       }));
 

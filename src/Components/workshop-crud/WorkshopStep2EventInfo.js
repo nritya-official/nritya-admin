@@ -7,6 +7,8 @@ import {
   Typography,
   IconButton,
   TextField,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -81,7 +83,10 @@ const WorkshopStep2EventInfo = ({
   };
 
   const handleSubvariantChange = (variantIndex, subvariantIndex, field) => (e) => {
-    const value = e?.target?.value ?? e;
+    const value =
+      e?.target?.type === "checkbox"
+        ? e.target.checked
+        : e?.target?.value ?? e;
     const updatedVariants = [...formData.variants];
     updatedVariants[variantIndex].subvariants[subvariantIndex][field] = value;
     setFormData((prev) => ({ ...prev, variants: updatedVariants }));
@@ -103,6 +108,9 @@ const WorkshopStep2EventInfo = ({
               price: "",
               capacity: "",
               description: "",
+              is_time_sensitive: false,
+              time_sensitive_date: null,
+              time_sensitive_time: null,
             },
           ],
         },
@@ -122,6 +130,9 @@ const WorkshopStep2EventInfo = ({
       price: "",
       capacity: "",
       description: "",
+      is_time_sensitive: false,
+      time_sensitive_date: null,
+      time_sensitive_time: null,
     });
     setFormData((prev) => ({ ...prev, variants: updatedVariants }));
   };
@@ -360,6 +371,7 @@ const WorkshopStep2EventInfo = ({
                   </Box>
 
                   {variant.subvariants.map((subvariant, subvariantIndex) => (
+                    <Box key={subvariantIndex} sx={{border: "1px solid #E0E0E0", borderRadius: "8px", p: 2, mb: 2}}>
                     <Grid
                       key={subvariantIndex}
                       container
@@ -468,7 +480,127 @@ const WorkshopStep2EventInfo = ({
                           </IconButton>
                         )}
                       </Grid>
+                      <Grid item xs={12} sm={3}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={!!subvariant.is_time_sensitive}
+                              onChange={(event) => {
+                                const checked = event.target.checked;
+                                const updatedVariants = [...formData.variants];
+                                const targetSubvariant =
+                                  updatedVariants[variantIndex].subvariants[
+                                    subvariantIndex
+                                  ];
+                                targetSubvariant.is_time_sensitive = checked;
+                                if (!checked) {
+                                  targetSubvariant.time_sensitive_date = null;
+                                  targetSubvariant.time_sensitive_time = null;
+                                }
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  variants: updatedVariants,
+                                }));
+                              }}
+                              color="primary"
+                            />
+                          }
+                          label="Time Sensitive"
+                        />
+                      </Grid>
+
+                      {subvariant.is_time_sensitive && (
+                        <>
+                          <Grid item xs={12} sm={3}>
+                            <Typography
+                              variant="body1"
+                              sx={{ fontSize: "16px" }}
+                              gutterBottom
+                            >
+                              Specific Date
+                            </Typography>
+                            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                              <DatePicker
+                                sx={{ width: "100%" }}
+                                value={
+                                  subvariant.time_sensitive_date
+                                    ? dayjs(subvariant.time_sensitive_date)
+                                    : null
+                                }
+                                onChange={(newValue) => {
+                                  const updatedVariants = [
+                                    ...formData.variants,
+                                  ];
+                                  updatedVariants[variantIndex].subvariants[
+                                    subvariantIndex
+                                  ].time_sensitive_date = newValue
+                                    ? newValue.format("YYYY-MM-DD")
+                                    : null;
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    variants: updatedVariants,
+                                  }));
+                                }}
+                                renderInput={(params) => (
+                                  <TextField
+                                    {...params}
+                                    fullWidth
+                                    sx={{ height: FORM_FIELD_HEIGHT }}
+                                    variant="outlined"
+                                  />
+                                )}
+                              />
+                            </LocalizationProvider>
+                          </Grid>
+
+                          <Grid item xs={12} sm={3}>
+                            <Typography
+                              variant="body1"
+                              sx={{ fontSize: "16px" }}
+                              gutterBottom
+                            >
+                              Specific Time
+                            </Typography>
+                            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                              <TimePicker
+                                sx={{ width: "100%" }}
+                                value={
+                                  subvariant.time_sensitive_time
+                                    ? dayjs(
+                                        subvariant.time_sensitive_time,
+                                        "HH:mm:ss"
+                                      )
+                                    : null
+                                }
+                                onChange={(newValue) => {
+                                  const updatedVariants = [
+                                    ...formData.variants,
+                                  ];
+                                  updatedVariants[variantIndex].subvariants[
+                                    subvariantIndex
+                                  ].time_sensitive_time = newValue
+                                    ? newValue.format("HH:mm:ss")
+                                    : null;
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    variants: updatedVariants,
+                                  }));
+                                }}
+                                renderInput={(params) => (
+                                  <TextField
+                                    {...params}
+                                    fullWidth
+                                    sx={{ height: FORM_FIELD_HEIGHT }}
+                                    variant="outlined"
+                                  />
+                                )}
+                              />
+                            </LocalizationProvider>
+                          </Grid>
+                        </>
+                      )}
                     </Grid>
+                    </Box>
                   ))}
                 </Grid>
               </Grid>
