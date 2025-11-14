@@ -32,6 +32,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import UserKycsNew from "./Screens/UserKycsNew";
 import Loader from "./Components/Loader";
 import PageTracking from "./Screens/PageTracking";
+import WorkshopBookingMonitor from "./Screens/WorkshopBookingMonitor";
 
 const darkTheme = createTheme({
   palette: {
@@ -66,6 +67,7 @@ function App() {
                 <Route path="/instructors" element={<Instructors />} />
                 <Route path="/carouselImgMgmt" element={<CarouselImgMgmt />} />
                 <Route path="/pageTracking" element={<PageTracking />} />
+                <Route path="/workshopBookings" element={<WorkshopBookingMonitor />} />
                 <Route element={<ProtectedRoles roleInput={1} />}>
                   <Route path="/adminMgmt" element={<AdminMgmt />} />
                   <Route path="/data" element={<Data />} />
