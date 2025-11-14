@@ -293,7 +293,7 @@ function WorkshopCrud() {
     const transformedVariants = formData.variants.map((variant, index) => ({
       variant_id: `NEW_${index + 1}`,
       date: variant.date ? new Date(variant.date).toISOString().split('T')[0] : "",
-      time: variant.time || "",
+      time: variant.startTime && variant.endTime ? `${variant.startTime}-${variant.endTime}` : (variant.time || ""),
       description: variant.description || "",
       subvariants: variant.subvariants.map((sub, pIndex) => ({
         subvariant_id: `NEW_${index}_${pIndex + 1}`,
@@ -360,7 +360,7 @@ function WorkshopCrud() {
     const transformedVariants = formData.variants.map((variant, index) => ({
       variant_id: selectedWorkshop?.variants?.[index]?.variant_id || `NEW_${index + 1}`,
       date: variant.date ? new Date(variant.date).toISOString().split('T')[0] : "",
-      time: variant.time || "",
+      time: variant.startTime && variant.endTime ? `${variant.startTime}-${variant.endTime}` : (variant.time || ""),
       description: variant.description || "",
       subvariants: variant.subvariants.map((sub, pIndex) => ({
         subvariant_id: selectedWorkshop?.variants?.[index]?.subvariants?.[pIndex]?.subvariant_id || `NEW_${index}_${pIndex + 1}`,
