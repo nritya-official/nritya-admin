@@ -29,6 +29,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -36,6 +37,10 @@ import {
   LocationOn as LocationIcon,
   FilterList as FilterIcon,
   Download as DownloadIcon,
+  LocalOffer as LocalOfferIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import axios from "axios";
 import WorkshopForm from "../Components/workshop-crud/WorkshopForm";
@@ -147,6 +152,20 @@ function WorkshopCrud() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [workshopToDelete, setWorkshopToDelete] = useState(null);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+
+  // Discount management state
+  const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
+  const [selectedWorkshopForDiscount, setSelectedWorkshopForDiscount] = useState(null);
+  const [discounts, setDiscounts] = useState([]);
+  const [loadingDiscounts, setLoadingDiscounts] = useState(false);
+  const [editingDiscount, setEditingDiscount] = useState(null);
+  const [newDiscount, setNewDiscount] = useState({
+    discount_type: "percentage",
+    discount_value: "",
+    discount_bearer: "NRITYA",
+    description: "",
+    is_active: true
+  });
 
   const handleSearch = async () => {
     let searchUrl = `${baseUrlServer}crud/get_workshops_by_creator/`;
@@ -612,6 +631,133 @@ function WorkshopCrud() {
     setCurrentWindow('WORKSHOP_REVENUE');
   };
 
+  // Discount management handlers
+  const handleOpenDiscountDialog = async (workshop) => {
+    setSelectedWorkshopForDiscount(workshop);
+    setDiscountDialogOpen(true);
+    await fetchDiscounts(workshop.workshop_id);
+  };
+
+  const handleCloseDiscountDialog = () => {
+    setDiscountDialogOpen(false);
+    setSelectedWorkshopForDiscount(null);
+    setDiscounts([]);
+    setEditingDiscount(null);
+    setNewDiscount({
+      discount_type: "percentage",
+      discount_value: "",
+      discount_bearer: "NRITYA",
+      description: "",
+      is_active: true
+    });
+  };
+
+  const fetchDiscounts = async (workshopId) => {
+    setLoadingDiscounts(true);
+    try {
+      const response = await axios.get(`${baseUrlServer}crud/discounts/${workshopId}/`);
+      setDiscounts(response.data.discounts || []);
+    } catch (error) {
+      console.error("Error fetching discounts:", error);
+      alert("Failed to fetch discounts");
+    } finally {
+      setLoadingDiscounts(false);
+    }
+  };
+
+  const handleEditDiscount = (discount) => {
+    setEditingDiscount(discount);
+    setNewDiscount({
+      discount_type: discount.discount_type,
+      discount_value: discount.discount_value.toString(),
+      discount_bearer: discount.discount_bearer,
+      description: discount.description,
+      is_active: discount.is_active
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDiscount(null);
+    setNewDiscount({
+      discount_type: "percentage",
+      discount_value: "",
+      discount_bearer: "NRITYA",
+      description: "",
+      is_active: true
+    });
+  };
+
+  const handleCreateOrUpdateDiscount = async () => {
+    if (!newDiscount.discount_value || !newDiscount.description) {
+      alert("Please fill in discount value and description");
+      return;
+    }
+
+    try {
+      if (editingDiscount) {
+        // Update existing discount
+        const payload = {
+          discount_type: newDiscount.discount_type,
+          discount_value: parseFloat(newDiscount.discount_value),
+          discount_bearer: newDiscount.discount_bearer,
+          description: newDiscount.description,
+          is_active: newDiscount.is_active
+        };
+
+        await axios.put(`${baseUrlServer}crud/discounts/${editingDiscount.discount_id}/update/`, payload);
+        alert("Discount updated successfully!");
+      } else {
+        // Create new discount
+        const payload = {
+          workshop_id: selectedWorkshopForDiscount.workshop_id,
+          discount_type: newDiscount.discount_type,
+          discount_value: parseFloat(newDiscount.discount_value),
+          discount_bearer: newDiscount.discount_bearer,
+          description: newDiscount.description,
+          is_active: newDiscount.is_active
+        };
+
+        await axios.post(`${baseUrlServer}crud/discounts/create/`, payload);
+        alert("Discount created successfully!");
+      }
+      
+      // Reset form and refresh discounts
+      setEditingDiscount(null);
+      setNewDiscount({
+        discount_type: "percentage",
+        discount_value: "",
+        discount_bearer: "NRITYA",
+        description: "",
+        is_active: true
+      });
+      await fetchDiscounts(selectedWorkshopForDiscount.workshop_id);
+    } catch (error) {
+      console.error("Error saving discount:", error);
+      alert(`Failed to save discount: ${error.response?.data?.error || error.message}`);
+    }
+  };
+
+  const handleDeleteDiscount = async (discountId) => {
+    if (!window.confirm("Are you sure you want to delete this discount?")) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${baseUrlServer}crud/discounts/${discountId}/delete/`);
+      alert("Discount deleted successfully!");
+      
+      // If we were editing this discount, cancel the edit
+      if (editingDiscount && editingDiscount.discount_id === discountId) {
+        handleCancelEdit();
+      }
+      
+      await fetchDiscounts(selectedWorkshopForDiscount.workshop_id);
+    } catch (error) {
+      console.error("Error deleting discount:", error);
+      alert(`Failed to delete discount: ${error.response?.data?.error || error.message}`);
+    }
+  };
+
   return (
     <>
       {(currentWindow === WINDOWS.ADD_WORKSHOP ||
@@ -1048,6 +1194,26 @@ function WorkshopCrud() {
                                 Revenue
                               </Button>
                             </Tooltip>
+                            <Tooltip title="Manage discounts">
+                              <Button
+                                variant="text"
+                                size="small"
+                                onClick={() => handleOpenDiscountDialog(workshop)}
+                                sx={{ 
+                                  fontSize: "12px", 
+                                  py: 0, 
+                                  bgcolor: "#28a745",
+                                  color: "white",
+                                  textTransform: "capitalize",
+                                  '&:hover': { 
+                                    bgcolor: "#28a745", 
+                                    color: "white"
+                                  }
+                                }}
+                              >
+                                Discount
+                              </Button>
+                            </Tooltip>
                             <Tooltip title="Export workshop data as JSON">
                               <DownloadIcon
                      
@@ -1149,6 +1315,191 @@ function WorkshopCrud() {
             }}
           >
             Delete Workshop
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Discount Management Dialog */}
+      <Dialog
+        open={discountDialogOpen}
+        onClose={handleCloseDiscountDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 600, bgcolor: "#28a745", color: "white" }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <LocalOfferIcon />
+            Manage Discounts - {selectedWorkshopForDiscount?.name}
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          {/* Create/Update Discount Form - Only show if no active discount or editing */}
+          {(discounts.length === 0 || editingDiscount) && (
+            <Card sx={{ mb: 3, bgcolor: editingDiscount ? "#fff3cd" : "#f8f9fa" }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  {editingDiscount ? "✏️ Update Discount" : <><AddIcon /> Create New Discount</>}
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <TextField
+                        label="Discount Value (%)"
+                        type="number"
+                        value={newDiscount.discount_value}
+                        onChange={(e) => setNewDiscount({ ...newDiscount, discount_value: e.target.value })}
+                        placeholder="e.g., 20"
+                        inputProps={{ min: 0, max: 100 }}
+                      />
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <TextField
+                        select
+                        label="Discount Bearer"
+                        value={newDiscount.discount_bearer}
+                        onChange={(e) => setNewDiscount({ ...newDiscount, discount_bearer: e.target.value })}
+                        SelectProps={{
+                          native: true,
+                        }}
+                      >
+                        <option value="NRITYA">NRITYA</option>
+                        <option value="WORKSHOP_OWNER">WORKSHOP_OWNER</option>
+                        <option value="SHARED">SHARED</option>
+                      </TextField>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Description"
+                      value={newDiscount.description}
+                      onChange={(e) => setNewDiscount({ ...newDiscount, description: e.target.value })}
+                      placeholder="e.g., 20% Platform Discount"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        variant="contained"
+                        onClick={handleCreateOrUpdateDiscount}
+                        sx={{ 
+                          bgcolor: editingDiscount ? "#ffc107" : "#28a745",
+                          color: editingDiscount ? "#000" : "#fff",
+                          '&:hover': { bgcolor: editingDiscount ? "#e0a800" : "#218838" }
+                        }}
+                      >
+                        {editingDiscount ? "Update Discount" : "Create Discount"}
+                      </Button>
+                      {editingDiscount && (
+                        <Button
+                          variant="outlined"
+                          onClick={handleCancelEdit}
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </Stack>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Existing Discounts List */}
+          <Typography variant="h6" gutterBottom>
+            Active Discounts
+          </Typography>
+          
+          {/* Info message when discount exists and not editing */}
+          {discounts.length > 0 && !editingDiscount && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Only one active discount is allowed per workshop. You can update or delete the existing discount.
+            </Alert>
+          )}
+          
+          {loadingDiscounts ? (
+            <Box display="flex" justifyContent="center" p={3}>
+              <Typography>Loading discounts...</Typography>
+            </Box>
+          ) : discounts.length === 0 ? (
+            <Alert severity="info">No active discounts for this workshop</Alert>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Description</strong></TableCell>
+                    <TableCell><strong>Type</strong></TableCell>
+                    <TableCell><strong>Value</strong></TableCell>
+                    <TableCell><strong>Bearer</strong></TableCell>
+                    <TableCell><strong>Promo Code</strong></TableCell>
+                    <TableCell><strong>Actions</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {discounts.map((discount) => (
+                    <TableRow key={discount.discount_id}>
+                      <TableCell>{discount.description || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={discount.discount_type} 
+                          size="small" 
+                          color="primary"
+                        />
+                      </TableCell>
+                      <TableCell>{discount.discount_value}%</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={discount.discount_bearer} 
+                          size="small" 
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>{discount.promo_code || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Stack direction="row" spacing={1}>
+                          <Tooltip title="Edit discount">
+                            <Button
+                              variant="text"
+                              size="small"
+                              onClick={() => handleEditDiscount(discount)}
+                              sx={{ 
+                                color: "#ffc107",
+                                minWidth: 'auto',
+                                p: 0.5
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip title="Delete discount">
+                            <Button
+                              variant="text"
+                              size="small"
+                              onClick={() => handleDeleteDiscount(discount.discount_id)}
+                              sx={{ 
+                                color: "#dc3545",
+                                minWidth: 'auto',
+                                p: 0.5
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </Button>
+                          </Tooltip>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCloseDiscountDialog} variant="outlined">
+            Close
           </Button>
         </DialogActions>
       </Dialog>

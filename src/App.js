@@ -56,7 +56,6 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route element={<ProtectedRoutes />}>
                 <Route path="/transactions" element={<Transactions />} />
-                <Route path="/users" element={<Users />} />
                 <Route path="/user-kycs" element={<UserKycsNew />} />
                 <Route path="/studiosCrud" element={<StudioCrud />} />
                 <Route path="/workshopsCrud" element={<WorkshopCrud />} />

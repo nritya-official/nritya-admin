@@ -1,49 +1,194 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  Typography, 
-  TextField, 
-  Button, 
-  Select, 
-  MenuItem, 
-  Grid,
+import {
   Box,
-  Tabs,
-  Tab,
+  Typography,
+  Button,
+  TextField,
+  Grid,
+  Card,
+  CardContent,
   Chip,
   Alert,
   CircularProgress,
+  ToggleButtonGroup,
   ToggleButton,
-  ToggleButtonGroup
+  TableContainer,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Paper,
+  Stack,
+  Pagination,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  IconButton,
+  Tooltip,
+  Divider
 } from '@mui/material';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper 
-} from '@mui/material';
+import {
+  Search as SearchIcon,
+  Refresh as RefreshIcon,
+  Download as DownloadIcon,
+  FilterList as FilterListIcon,
+  ViewModule as ViewModuleIcon,
+  ViewList as ViewListIcon
+} from '@mui/icons-material';
+import axios from 'axios';
+
+const SERVER_URLS = {
+  PRODUCTION: 'https://djserver-production-ffe37b1b53b5.herokuapp.com/',
+  STAGING: 'https://nrityaserver-2b241e0a97e5.herokuapp.com/'
+};
+
+const ITEMS_PER_PAGE = 50;
 
 function Transactions() {
+  // Environment and view mode
+  const [environment, setEnvironment] = useState('STAGING');
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'cards'
+
+  // Search and filter
+  const [searchType, setSearchType] = useState('email');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('Email');
-  const [searchResults, setSearchResults] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  // Data
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState(0);
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
 
-  const API_BASE_URL =  'https://nrityaserver-2b241e0a97e5.herokuapp.com/' //'http://localhost:8000';
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  // Handle tab change
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-    setSearchResults([]);
+  // Date range
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const baseUrl = SERVER_URLS[environment];
+
+  // Format helpers
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    try {
+      return new Date(timestamp).toLocaleString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  const formatAmount = (amount) => {
+    if (!amount && amount !== 0) return 'N/A';
+    return `₹${Number(amount).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
+  };
+
+  const getStatusColor = (status) => {
+    const statusLower = status?.toLowerCase();
+    switch (statusLower) {
+      case 'success':
+      case 'completed':
+      case 'paid':
+        return 'success';
+      case 'pending':
+      case 'initiated':
+        return 'warning';
+      case 'failed':
+      case 'cancelled':
+        return 'error';
+      case 'refunded':
+        return 'info';
+      default:
+        return 'default';
+    }
+  };
+
+  // Fetch transactions
+  const fetchTransactions = async (page = 1) => {
+    setLoading(true);
     setError('');
-    setSearchQuery('');
+
+    try {
+      const offset = (page - 1) * ITEMS_PER_PAGE;
+      let url = `${baseUrl}payments/transactions?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
+
+      // Add search filters
+      if (searchQuery.trim()) {
+        switch (searchType) {
+          case 'email':
+            url += `&user_email=${encodeURIComponent(searchQuery.trim())}`;
+            break;
+          case 'user_id':
+            url += `&user_id=${encodeURIComponent(searchQuery.trim())}`;
+            break;
+          case 'transaction_id':
+            url += `&transaction_id=${encodeURIComponent(searchQuery.trim())}`;
+            break;
+          case 'razorpay_payment_id':
+            url += `&razorpay_payment_id=${encodeURIComponent(searchQuery.trim())}`;
+            break;
+          case 'razorpay_order_id':
+            url += `&razorpay_order_id=${encodeURIComponent(searchQuery.trim())}`;
+            break;
+          default:
+            break;
+        }
+      }
+
+      // Add status filter
+      if (statusFilter !== 'all') {
+        url += `&payment_status=${statusFilter}`;
+      }
+
+      // Add date filters
+      if (startDate) {
+        url += `&start_date=${startDate}`;
+      }
+      if (endDate) {
+        url += `&end_date=${endDate}`;
+      }
+
+      const response = await axios.get(url);
+      
+      if (response.data.success) {
+        setTransactions(response.data.transactions || []);
+        setTotalCount(response.data.total_count || 0);
+        
+        if (response.data.transactions?.length === 0) {
+          setError('No transactions found for the given criteria');
+        }
+      } else {
+        setError(response.data.message || 'Failed to fetch transactions');
+        setTransactions([]);
+      }
+    } catch (err) {
+      console.error('Error fetching transactions:', err);
+      setError(err.response?.data?.message || 'Error fetching transactions. Please try again.');
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handlers
+  const handleEnvironmentChange = (event, newEnvironment) => {
+    if (newEnvironment !== null) {
+      setEnvironment(newEnvironment);
+      setTransactions([]);
+      setCurrentPage(1);
+    }
   };
 
   const handleViewModeChange = (event, newMode) => {
@@ -52,279 +197,232 @@ function Transactions() {
     }
   };
 
-  const fetchTransactions = async (endpoint, params = {}) => {
-    try {
-      const queryString = new URLSearchParams(params).toString();
-      const url = `${API_BASE_URL}${endpoint}${queryString ? `?${queryString}` : ''}`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
-    }
+  const handleSearch = () => {
+    setCurrentPage(1);
+    fetchTransactions(1);
   };
 
-  const handleSearch = async () => {
-    if (activeTab !== 3 && !searchQuery.trim()) {
-      setError('Please enter a search query');
+  const handleRefresh = () => {
+    fetchTransactions(currentPage);
+  };
+
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+    fetchTransactions(value);
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setStartDate('');
+    setEndDate('');
+    setCurrentPage(1);
+  };
+
+  const handleExportCSV = () => {
+    if (transactions.length === 0) {
+      alert('No data to export');
       return;
     }
 
-    setLoading(true);
-    setError('');
-    
-    try {
-      let data = [];
-      
-      switch (activeTab) {
-        case 0: // Email Search
-          data = await fetchTransactions('/payments/transactions', { user_email: searchQuery.trim() });
-          break;
-        case 1: // User ID Search
-          data = await fetchTransactions(`/payments/transactions/user/${searchQuery.trim()}`);
-          break;
-        case 2: // Workshop ID Search
-          data = await fetchTransactions(`/payments/transactions/workshop/${searchQuery.trim()}`);
-          break;
-        case 3: // View All
-          data = await fetchTransactions('/payments/transactions');
-          break;
-        default:
-          data = [];
-      }
-      
-      // Handle different response formats
-      if (Array.isArray(data)) {
-        setSearchResults(data);
-      } else if (data.transactions) {
-        setSearchResults(data.transactions);
-      } else if (data.data) {
-        setSearchResults(data.data);
-      } else {
-        setSearchResults([data]);
-      }
-      
-      if (data.length === 0 || (data.transactions && data.transactions.length === 0)) {
-        setError('No transactions found for the given criteria');
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error.message);
-      setError('Error fetching transactions. Please try again.');
-      setSearchResults([]);
-    } finally {
-      setLoading(false);
-    }
+    const headers = [
+      'Transaction ID',
+      'User ID',
+      'User Email',
+      'Payment Status',
+      'Payment Method',
+      'Subtotal',
+      'Booking Fee',
+      'Total Amount',
+      'Razorpay Payment ID',
+      'Razorpay Order ID',
+      'Error Code',
+      'Error Reason',
+      'Created At'
+    ];
+
+    const csvData = transactions.map(t => [
+      t.transaction_id || '',
+      t.user_id || '',
+      t.user_email || '',
+      t.payment_status || '',
+      t.payment_method || '',
+      t.subtotal || '',
+      t.booking_fee || '',
+      t.total_amount || '',
+      t.razorpay_payment_id || '',
+      t.razorpay_order_id || '',
+      t.error_code || '',
+      t.error_reason || '',
+      t.created_at || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transactions_${environment}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
-  const handleFilterChange = (event) => {
-    setSelectedFilter(event.target.value);
-  };
+  // Load all transactions on mount
+  useEffect(() => {
+    fetchTransactions(1);
+  }, [environment]);
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'N/A';
-    try {
-      return new Date(timestamp).toLocaleString();
-    } catch (error) {
-      return 'Invalid Date';
-    }
-  };
-
-  const formatAmount = (amount) => {
-    if (!amount) return 'N/A';
-    return `₹${amount.toLocaleString()}`;
-  };
-
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'success':
-      case 'completed':
-      case 'paid':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      case 'failed':
-      case 'cancelled':
-      case 'refunded':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
+  // Render transaction card
   const renderTransactionCard = (transaction) => (
-    <Grid item key={transaction.transaction_id || transaction.id} xs={12} sm={6} md={4} lg={3}>
-      <Card style={{ marginBottom: '16px', height: '100%' }}>
+    <Grid item key={transaction.transaction_id} xs={12} sm={6} md={4}>
+      <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <CardContent>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h6" component="h3">
-              Transaction {transaction.transaction_id}
+            <Typography variant="subtitle2" color="text.secondary">
+              {transaction.transaction_id}
             </Typography>
-            {transaction.payment_status && (
-              <Chip 
-                label={transaction.payment_status} 
-                color={getStatusColor(transaction.payment_status)}
-                size="small"
-              />
-            )}
+            <Chip 
+              label={transaction.payment_status || 'Unknown'} 
+              color={getStatusColor(transaction.payment_status)}
+              size="small"
+            />
           </Box>
-          
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableBody>
-                <TableRow>
-                  <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                    Subtotal
-                  </TableCell>
-                  <TableCell align="left">
-                    {formatAmount(transaction.sub_total)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                    Booking Fee
-                  </TableCell>
-                  <TableCell align="left">
-                    {formatAmount(transaction.booking_fee)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                    Total Amount
-                  </TableCell>
-                  <TableCell align="left">
-                    {formatAmount(transaction.total_amount)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                    User ID
-                  </TableCell>
-                  <TableCell align="left">
-                    {transaction.user_id || transaction.userId || 'N/A'}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                    User Email
-                  </TableCell>
-                  <TableCell align="left">
-                    {transaction.user_email || transaction.email || 'N/A'}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                    Payment Method
-                  </TableCell>
-                  <TableCell align="left">
-                    {transaction.payment_method || 'N/A'}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                    Razorpay Payment ID
-                  </TableCell>
-                  <TableCell align="left">
-                    {transaction.razorpay_payment_id || 'N/A'}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                    Razorpay Order ID
-                  </TableCell>
-                  <TableCell align="left">
-                    {transaction.razorpay_order_id || 'N/A'}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                    Created At
-                  </TableCell>
-                  <TableCell align="left">
-                    {formatDate(transaction.created_at || transaction.createdAt)}
-                  </TableCell>
-                </TableRow>
-                {transaction.error_code && (
-                  <TableRow>
-                    <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                      Error Code
-                    </TableCell>
-                    <TableCell align="left">
-                      {transaction.error_code}
-                    </TableCell>
-                  </TableRow>
-                )}
-                {transaction.error_reason && (
-                  <TableRow>
-                    <TableCell component="th" scope="row" style={{ fontWeight: 'bold' }}>
-                      Error Reason
-                    </TableCell>
-                    <TableCell align="left">
-                      {transaction.error_reason}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+
+          <Stack spacing={1}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">User Email</Typography>
+              <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                {transaction.user_email || 'N/A'}
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="caption" color="text.secondary">User ID</Typography>
+              <Typography variant="body2">{transaction.user_id || 'N/A'}</Typography>
+            </Box>
+
+            <Divider />
+
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="caption" color="text.secondary">Subtotal</Typography>
+              <Typography variant="body2">{formatAmount(transaction.subtotal)}</Typography>
+            </Box>
+
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="caption" color="text.secondary">Booking Fee</Typography>
+              <Typography variant="body2">{formatAmount(transaction.booking_fee)}</Typography>
+            </Box>
+
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="body2" fontWeight="bold">Total Amount</Typography>
+              <Typography variant="body2" fontWeight="bold">
+                {formatAmount(transaction.total_amount)}
+              </Typography>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Typography variant="caption" color="text.secondary">Payment Method</Typography>
+              <Typography variant="body2">{transaction.payment_method || 'N/A'}</Typography>
+            </Box>
+
+            {transaction.razorpay_payment_id && (
+              <Box>
+                <Typography variant="caption" color="text.secondary">Razorpay Payment ID</Typography>
+                <Typography variant="body2" sx={{ wordBreak: 'break-all', fontSize: '0.75rem' }}>
+                  {transaction.razorpay_payment_id}
+                </Typography>
+              </Box>
+            )}
+
+            {transaction.razorpay_order_id && (
+              <Box>
+                <Typography variant="caption" color="text.secondary">Razorpay Order ID</Typography>
+                <Typography variant="body2" sx={{ wordBreak: 'break-all', fontSize: '0.75rem' }}>
+                  {transaction.razorpay_order_id}
+                </Typography>
+              </Box>
+            )}
+
+            <Box>
+              <Typography variant="caption" color="text.secondary">Created At</Typography>
+              <Typography variant="body2">{formatDate(transaction.created_at)}</Typography>
+            </Box>
+
+            {transaction.error_code && (
+              <Alert severity="error" sx={{ mt: 1, py: 0 }}>
+                <Typography variant="caption">
+                  <strong>Error:</strong> {transaction.error_code}
+                  {transaction.error_reason && ` - ${transaction.error_reason}`}
+                </Typography>
+              </Alert>
+            )}
+          </Stack>
         </CardContent>
       </Card>
     </Grid>
   );
 
+  // Render transaction table
   const renderTransactionTable = () => (
     <TableContainer component={Paper} sx={{ mt: 2 }}>
-      <Table>
+      <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
             <TableCell><strong>Transaction ID</strong></TableCell>
-            <TableCell><strong>User ID</strong></TableCell>
+            <TableCell><strong>Status</strong></TableCell>
             <TableCell><strong>User Email</strong></TableCell>
-            <TableCell><strong>Payment Status</strong></TableCell>
+            <TableCell><strong>User ID</strong></TableCell>
+            <TableCell align="right"><strong>Subtotal</strong></TableCell>
+            <TableCell align="right"><strong>Fee</strong></TableCell>
+            <TableCell align="right"><strong>Total</strong></TableCell>
             <TableCell><strong>Payment Method</strong></TableCell>
-            <TableCell><strong>Subtotal</strong></TableCell>
-            <TableCell><strong>Booking Fee</strong></TableCell>
-            <TableCell><strong>Total Amount</strong></TableCell>
             <TableCell><strong>Razorpay Payment ID</strong></TableCell>
             <TableCell><strong>Razorpay Order ID</strong></TableCell>
             <TableCell><strong>Created At</strong></TableCell>
-            <TableCell><strong>Error Code</strong></TableCell>
-            <TableCell><strong>Error Reason</strong></TableCell>
+            <TableCell><strong>Error</strong></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {searchResults.map((transaction) => (
-            <TableRow key={transaction.transaction_id || transaction.id}>
-              <TableCell>{transaction.transaction_id || transaction.id || 'N/A'}</TableCell>
-              <TableCell>{transaction.user_id || transaction.userId || 'N/A'}</TableCell>
-              <TableCell>{transaction.user_email || transaction.email || 'N/A'}</TableCell>
+          {transactions.map((transaction) => (
+            <TableRow 
+              key={transaction.transaction_id}
+              hover
+              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+            >
+              <TableCell sx={{ fontSize: '0.75rem' }}>{transaction.transaction_id || 'N/A'}</TableCell>
               <TableCell>
                 <Chip 
-                  label={transaction.payment_status || 'N/A'} 
+                  label={transaction.payment_status || 'Unknown'} 
                   color={getStatusColor(transaction.payment_status)}
                   size="small"
                 />
               </TableCell>
-                             <TableCell>{transaction.payment_method || 'N/A'}</TableCell>
-               <TableCell>{formatAmount(transaction.subtotal)}</TableCell>
-               <TableCell>{formatAmount(transaction.booking_fee)}</TableCell>
-               <TableCell>{formatAmount(transaction.total)}</TableCell>
-               <TableCell>{transaction.razorpay_payment_id || 'N/A'}</TableCell>
-              <TableCell>{transaction.razorpay_order_id || 'N/A'}</TableCell>
-              <TableCell>{formatDate(transaction.created_at || transaction.createdAt)}</TableCell>
-              <TableCell>{transaction.error_code || 'N/A'}</TableCell>
-              <TableCell>{transaction.error_reason || 'N/A'}</TableCell>
+              <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {transaction.user_email || 'N/A'}
+              </TableCell>
+              <TableCell>{transaction.user_id || 'N/A'}</TableCell>
+              <TableCell align="right">{formatAmount(transaction.subtotal)}</TableCell>
+              <TableCell align="right">{formatAmount(transaction.booking_fee)}</TableCell>
+              <TableCell align="right"><strong>{formatAmount(transaction.total_amount)}</strong></TableCell>
+              <TableCell>{transaction.payment_method || 'N/A'}</TableCell>
+              <TableCell sx={{ fontSize: '0.7rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {transaction.razorpay_payment_id || 'N/A'}
+              </TableCell>
+              <TableCell sx={{ fontSize: '0.7rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {transaction.razorpay_order_id || 'N/A'}
+              </TableCell>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(transaction.created_at)}</TableCell>
+              <TableCell sx={{ fontSize: '0.7rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {transaction.error_code ? `${transaction.error_code}: ${transaction.error_reason || ''}` : 'N/A'}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -332,97 +430,225 @@ function Transactions() {
     </TableContainer>
   );
 
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
   return (
-    <div style={{ padding: '20px' }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Transaction Management
-      </Typography>
-      
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={activeTab} onChange={handleTabChange}>
-          <Tab label="Search by Email" />
-          <Tab label="Search by User ID" />
-          <Tab label="Search by Workshop ID" />
-          <Tab label="View All" />
-        </Tabs>
+    <Box sx={{ p: 3 }}>
+      {/* Header */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1">
+          Transaction Management
+        </Typography>
+        
+        <ToggleButtonGroup
+          value={environment}
+          exclusive
+          onChange={handleEnvironmentChange}
+          size="small"
+        >
+          <ToggleButton value="STAGING">Staging</ToggleButton>
+          <ToggleButton value="PRODUCTION">Production</ToggleButton>
+        </ToggleButtonGroup>
       </Box>
 
-      <Box sx={{ mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={6} md={4}>
-            <TextField
-              fullWidth
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                activeTab === 0 ? "Enter user email" :
-                activeTab === 1 ? "Enter user ID" :
-                activeTab === 2 ? "Enter workshop ID" :
-                "Click Search to view all transactions"
-              }
-              disabled={activeTab === 3}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6} md={2}>
-            <Button 
-              variant="contained" 
-              onClick={handleSearch}
-              disabled={loading}
-              fullWidth
-            >
-              {loading ? <CircularProgress size={20} /> : activeTab === 3 ? 'Load All' : 'Search'}
-            </Button>
-          </Grid>
-          {searchResults.length > 0 && (
+      {/* Filters */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Grid container spacing={2} alignItems="center">
+            {/* Search Type */}
             <Grid item xs={12} sm={6} md={2}>
-              <ToggleButtonGroup
-                value={viewMode}
-                exclusive
-                onChange={handleViewModeChange}
-                aria-label="view mode"
-              >
-                <ToggleButton value="cards" aria-label="card view">
-                  Cards
-                </ToggleButton>
-                <ToggleButton value="table" aria-label="table view">
-                  Table
-                </ToggleButton>
-              </ToggleButtonGroup>
+              <FormControl fullWidth size="small">
+                <InputLabel>Search By</InputLabel>
+                <Select
+                  value={searchType}
+                  label="Search By"
+                  onChange={(e) => setSearchType(e.target.value)}
+                >
+                  <MenuItem value="email">Email</MenuItem>
+                  <MenuItem value="user_id">User ID</MenuItem>
+                  <MenuItem value="transaction_id">Transaction ID</MenuItem>
+                  <MenuItem value="razorpay_payment_id">Razorpay Payment ID</MenuItem>
+                  <MenuItem value="razorpay_order_id">Razorpay Order ID</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
-          )}
-        </Grid>
-      </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+            {/* Search Query */}
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                fullWidth
+                size="small"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Enter ${searchType.replace('_', ' ')}`}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              />
+            </Grid>
+
+            {/* Status Filter */}
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={statusFilter}
+                  label="Status"
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <MenuItem value="all">All Status</MenuItem>
+                  <MenuItem value="Success">Success</MenuItem>
+                  <MenuItem value="Pending">Pending</MenuItem>
+                  <MenuItem value="Failed">Failed</MenuItem>
+                  <MenuItem value="Refunded">Refunded</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Date Range */}
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="Start Date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                fullWidth
+                size="small"
+                type="date"
+                label="End Date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+
+            {/* Action Buttons */}
+            <Grid item xs={12}>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="contained"
+                  startIcon={<SearchIcon />}
+                  onClick={handleSearch}
+                  disabled={loading}
+                >
+                  Search
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={handleRefresh}
+                  disabled={loading}
+                >
+                  Refresh
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={handleClearFilters}
+                >
+                  Clear Filters
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={handleExportCSV}
+                  disabled={transactions.length === 0}
+                >
+                  Export CSV
+                </Button>
+              </Stack>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Results Header */}
+      {transactions.length > 0 && (
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h6">
+            {totalCount.toLocaleString()} transaction(s) found
+            {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
+          </Typography>
+
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            size="small"
+          >
+            <ToggleButton value="table">
+              <Tooltip title="Table View">
+                <ViewListIcon />
+              </Tooltip>
+            </ToggleButton>
+            <ToggleButton value="cards">
+              <Tooltip title="Card View">
+                <ViewModuleIcon />
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <Box display="flex" justifyContent="center" alignItems="center" py={5}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {/* Error */}
+      {error && !loading && (
+        <Alert severity={transactions.length === 0 ? "warning" : "info"} sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
-      {searchResults.length > 0 && (
-        <Box>
-          <Typography variant="h6" gutterBottom>
-            Found {searchResults.length} transaction(s)
-          </Typography>
-          
+      {/* Results */}
+      {!loading && transactions.length > 0 && (
+        <>
           {viewMode === 'cards' ? (
             <Grid container spacing={2}>
-              {searchResults.map(renderTransactionCard)}
+              {transactions.map(renderTransactionCard)}
             </Grid>
           ) : (
             renderTransactionTable()
           )}
-        </Box>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Box display="flex" justifyContent="center" mt={4}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={handlePageChange}
+                color="primary"
+                size="large"
+                showFirstButton
+                showLastButton
+              />
+            </Box>
+          )}
+        </>
       )}
 
-      {!loading && !error && searchResults.length === 0 && searchQuery && (
-        <Alert severity="info">
-          No transactions found. Try a different search criteria.
-        </Alert>
+      {/* Empty State */}
+      {!loading && !error && transactions.length === 0 && (
+        <Paper sx={{ p: 5, textAlign: 'center' }}>
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No transactions found
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Try adjusting your search filters or load all transactions
+          </Typography>
+        </Paper>
       )}
-    </div>
+    </Box>
   );
 }
 
