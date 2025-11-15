@@ -104,10 +104,12 @@ function UserKycsNew() {
     color: theme.palette.text.primary,
     borderColor: theme.palette.divider,
   };
+  const url = `${modes[runMode].baseURL}/crud/getKyc/`
+  console.log("User KYC url", url)
 
   useEffect(() => {
     showLoading();
-    fetch(`${modes[runMode].baseURL}/crud/getKyc`)
+    fetch(url)
       .then((res) => res.json())
       .then((data) => setKycData(data.data))
       .catch((err) => console.error("Error fetching KYC data:", err))
