@@ -15,6 +15,7 @@ import {
   Select,
   Autocomplete,
   Stack,
+  Chip,
 } from "@mui/material";
 import {
   Add,
@@ -80,6 +81,7 @@ const initialValue = {
   landmark: "",
   mapAddress: "",
   geolocation: "",
+  instructors_ig_handles: [],
   variants: [
     {
       date: null,
@@ -167,6 +169,66 @@ const WorkshopForm = ({
   const [loadingStudios, setLoadingStudios] = useState(false);
   const [isCreatorEmailValid, setIsCreatorEmailValid] = useState(false);
   const [importFile, setImportFile] = useState(null);
+  const [igInputValue, setIgInputValue] = useState("");
+
+  const normalizeHandle = (handle) => {
+    if (typeof handle !== "string") return "";
+    const trimmed = handle.trim();
+    if (!trimmed) return "";
+    return trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
+  };
+
+  const setIgHandles = (callbackOrArray) => {
+    setFormData((prev) => {
+      const nextHandles =
+        typeof callbackOrArray === "function"
+          ? callbackOrArray(prev.instructors_ig_handles || [])
+          : callbackOrArray;
+      const safeHandles = Array.isArray(nextHandles) ? nextHandles : [];
+      return {
+        ...prev,
+        instructors_ig_handles: safeHandles,
+      };
+    });
+  };
+
+  const addIgHandle = (handle) => {
+    const normalized = normalizeHandle(handle);
+    if (!normalized) return;
+    setIgHandles((prevHandles) => {
+      if (prevHandles.includes(normalized)) return prevHandles;
+      return [...prevHandles, normalized];
+    });
+    setIgInputValue("");
+  };
+
+  const handleIgChipDelete = (index) => {
+    setIgHandles((prevHandles) => prevHandles.filter((_, i) => i !== index));
+  };
+
+  const handleIgChipEdit = (index) => {
+    const currentHandle = formData.instructors_ig_handles?.[index];
+    if (currentHandle === undefined) return;
+    const edited = window.prompt(
+      "Edit Instagram handle",
+      `@${currentHandle}`
+    );
+    if (edited === null) return;
+    const normalized = normalizeHandle(edited);
+    if (!normalized) return;
+    setIgHandles((prevHandles) => {
+      const updated = [...prevHandles];
+      updated[index] = normalized;
+      return updated;
+    });
+  };
+
+  const handleIgInputKeyDown = (event) => {
+    if ([" ", ",", "Enter"].includes(event.key) && igInputValue.trim()) {
+      event.preventDefault();
+      addIgHandle(igInputValue);
+    }
+  };
 
   // Handle JSON import
   const handleImportJson = (event) => {
@@ -539,6 +601,9 @@ const WorkshopForm = ({
         landmark: formData.landmark || "",
         geolocation: formData.geolocation || "",
         map_address: formData.mapAddress || "",
+        instructors_ig_handles: Array.isArray(formData.instructors_ig_handles) 
+          ? formData.instructors_ig_handles 
+          : (formData.instructors_ig_handles ? [formData.instructors_ig_handles] : []),
       };
       const transformedVariants = formData.variants.map((variant, index) => ({
         // Use existing variant_id when updating, generate NEW only when creating
@@ -1086,6 +1151,63 @@ const WorkshopForm = ({
                         ))}
                       </Select>
                     </FormControl>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        fontSize: "16px",
+                        color: "black",
+                      }}
+                      gutterBottom
+                    >
+                      Instructor Instagram Handles (Optional)
+                    </Typography>
+                    <Autocomplete
+                      multiple
+                      freeSolo
+                      id="instructors-ig-handles"
+                      options={[]}
+                      inputValue={igInputValue}
+                      onInputChange={(_, newInputValue) => setIgInputValue(newInputValue)}
+                      value={formData.instructors_ig_handles || []}
+                      onChange={(_, value) => {
+                        const cleanedHandles = value
+                          .map((handle) => normalizeHandle(handle))
+                          .filter(Boolean);
+                        const uniqueHandles = [...new Set(cleanedHandles)];
+                        setIgHandles(uniqueHandles);
+                        setIgInputValue("");
+                      }}
+                      disabled={!isCreatorEmailValid}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => (
+                          <Chip
+                            {...getTagProps({ index })}
+                            key={`${option}-${index}`}
+                            label={`@${option}`}
+                            onClick={() => handleIgChipEdit(index)}
+                            onDelete={() => handleIgChipDelete(index)}
+                            sx={{ cursor: "pointer" }}
+                          />
+                        ))
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          variant="outlined"
+                          placeholder="Enter Instagram handles (start each with @username)"
+                          helperText="Press space/comma/Enter after each handle. We strip @ before saving."
+                          onKeyDown={handleIgInputKeyDown}
+                          onBlur={() => {
+                            if (igInputValue.trim()) {
+                              addIgHandle(igInputValue);
+                            }
+                          }}
+                        />
+                      )}
+                    />
                   </Grid>
 
                   <Grid item xs={12} sm={6}>

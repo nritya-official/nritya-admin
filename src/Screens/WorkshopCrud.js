@@ -468,6 +468,20 @@ function WorkshopCrud() {
         ? formatedData.dance_styles.split(", ").filter(Boolean)
         : [];
 
+      // Handle instructors_ig_handles - support both snake_case and camelCase
+      if (formatedData.instructorsIgHandles && !formatedData.instructors_ig_handles) {
+        formatedData.instructors_ig_handles = Array.isArray(formatedData.instructorsIgHandles)
+          ? formatedData.instructorsIgHandles
+          : [];
+      }
+      if (!formatedData.instructors_ig_handles) {
+        formatedData.instructors_ig_handles = [];
+      }
+      // Ensure it's always an array
+      if (!Array.isArray(formatedData.instructors_ig_handles)) {
+        formatedData.instructors_ig_handles = [];
+      }
+
       formatedData.variants = formatedData.variants || [
         {
           date: null,
