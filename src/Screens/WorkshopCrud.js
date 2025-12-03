@@ -1147,7 +1147,7 @@ function WorkshopCrud() {
                               <Button
                                 variant="text"
                                 size="small"
-                                disabled={!getDraftStatus(workshop.creation_time).isDraftActive}
+                                //disabled={!getDraftStatus(workshop.creation_time).isDraftActive}
                                 onClick={() => handleWorkshopClick(workshop)}
                                 sx={{ 
                                   fontSize: "12px", 
