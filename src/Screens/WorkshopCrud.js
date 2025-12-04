@@ -357,51 +357,60 @@ function WorkshopCrud() {
     }
   };
 
-  const pushData = async (id, entityType) => {
-    const transformedWorkshop = {
-      name: formData.name,
-      description: formData.description,
-      dance_styles: formData.dance_styles.join(", "),
-      youtube_link: formData.youtube_link || "",
-      level: formData.level,
-      start_date: formData.start_date ? new Date(formData.start_date).toISOString().split('T')[0] : "",
-      end_date: formData.end_date ? new Date(formData.end_date).toISOString().split('T')[0] : "",
-      creator_email: formData.creator_email,
-      building: formData.building || "",
-      street: formData.street || "",
-      city: formData.city || "",
-      //state: formData.state || "",
-      //pincode: formData.pincode || "",
-      geolocation: formData.geolocation || "",
-      mapAddress: formData.mapAddress || "",
-    };
-    console.log("AR_ transformedWorkshop {transformedWorkshop}", transformedWorkshop);
-    const transformedVariants = formData.variants.map((variant, index) => ({
-      variant_id: selectedWorkshop?.variants?.[index]?.variant_id || `NEW_${index + 1}`,
-      date: variant.date ? new Date(variant.date).toISOString().split('T')[0] : "",
-      time: variant.startTime && variant.endTime ? `${variant.startTime}-${variant.endTime}` : (variant.time || ""),
-      description: variant.description || "",
-      subvariants: variant.subvariants.map((sub, pIndex) => ({
-        subvariant_id: selectedWorkshop?.variants?.[index]?.subvariants?.[pIndex]?.subvariant_id || `NEW_${index}_${pIndex + 1}`,
-        price: sub.price || "",
-        capacity: sub.capacity || "",
-        description: sub.description || "",
-        is_time_sensitive: !!sub.is_time_sensitive,
-        time_sensitive_date:
-          sub.is_time_sensitive && sub.time_sensitive_date
-            ? sub.time_sensitive_date
-            : null,
-        time_sensitive_time:
-          sub.is_time_sensitive && sub.time_sensitive_time
-            ? sub.time_sensitive_time
-            : null,
-      })),
-    }));
+  const pushData = async (id, entityType, payloadFromForm = null) => {
+    let payload;
+    
+    // If payload is provided from WorkshopForm, use it (fresh data)
+    // Otherwise, transform from formData state (fallback for backward compatibility)
+    if (payloadFromForm) {
+      payload = payloadFromForm;
+      console.log("AR_ Using payload from WorkshopForm:", payload);
+    } else {
+      const transformedWorkshop = {
+        name: formData.name,
+        description: formData.description,
+        dance_styles: formData.dance_styles.join(", "),
+        youtube_link: formData.youtube_link || "",
+        level: formData.level,
+        start_date: formData.start_date ? new Date(formData.start_date).toISOString().split('T')[0] : "",
+        end_date: formData.end_date ? new Date(formData.end_date).toISOString().split('T')[0] : "",
+        creator_email: formData.creator_email,
+        building: formData.building || "",
+        street: formData.street || "",
+        city: formData.city || "",
+        //state: formData.state || "",
+        //pincode: formData.pincode || "",
+        geolocation: formData.geolocation || "",
+        mapAddress: formData.mapAddress || "",
+      };
+      console.log("AR_ transformedWorkshop {transformedWorkshop}", transformedWorkshop);
+      const transformedVariants = formData.variants.map((variant, index) => ({
+        variant_id: selectedWorkshop?.variants?.[index]?.variant_id || `NEW_${index + 1}`,
+        date: variant.date ? new Date(variant.date).toISOString().split('T')[0] : "",
+        time: variant.startTime && variant.endTime ? `${variant.startTime}-${variant.endTime}` : (variant.time || ""),
+        description: variant.description || "",
+        subvariants: variant.subvariants.map((sub, pIndex) => ({
+          subvariant_id: selectedWorkshop?.variants?.[index]?.subvariants?.[pIndex]?.subvariant_id || `NEW_${index}_${pIndex + 1}`,
+          price: sub.price || "",
+          capacity: sub.capacity || "",
+          description: sub.description || "",
+          is_time_sensitive: !!sub.is_time_sensitive,
+          time_sensitive_date:
+            sub.is_time_sensitive && sub.time_sensitive_date
+              ? sub.time_sensitive_date
+              : null,
+          time_sensitive_time:
+            sub.is_time_sensitive && sub.time_sensitive_time
+              ? sub.time_sensitive_time
+              : null,
+        })),
+      }));
 
-    const payload = {
-      workshop: transformedWorkshop,
-      variants: transformedVariants,
-    };
+      payload = {
+        workshop: transformedWorkshop,
+        variants: transformedVariants,
+      };
+    }
 
     try {
       const response = await fetch(
@@ -534,9 +543,9 @@ function WorkshopCrud() {
     
     try {
       if (isUpdating) {
-        console.log("Updating workshop...");
+        console.log("Workshop update handled by pushData via onUpdate callback, just cleaning up...");
+        // Workshop is already updated by pushData (called via onUpdate), just clean up
         setIsUpdating(false);
-        await pushData(selectedWorkshop.workshop_id, "Workshop");
         setSelectedWorkshop(null);
       } else {
         console.log("Creating new workshop - calling callback if provided");
@@ -785,6 +794,7 @@ function WorkshopCrud() {
           errors={errors}
           onBack={handleBack}
           onSubmit={handleSubmit}
+          onUpdate={(payload) => pushData(selectedWorkshop.workshop_id, "Workshop", payload)}
         />
       )}
 

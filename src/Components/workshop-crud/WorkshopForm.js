@@ -117,7 +117,8 @@ const WorkshopForm = ({
   setFormData, 
   errors, 
   onBack, 
-  onSubmit 
+  onSubmit,
+  onUpdate
 }) => {
   const [step, setStep] = useState(1);
   const hasInitializedStudio = useRef(false);
@@ -600,7 +601,7 @@ const WorkshopForm = ({
         city: formData.city || "",
         landmark: formData.landmark || "",
         geolocation: formData.geolocation || "",
-        map_address: formData.mapAddress || "",
+        mapAddress: formData.mapAddress || "", // Use camelCase to match backend expectation
         instructors_ig_handles: Array.isArray(formData.instructors_ig_handles) 
           ? formData.instructors_ig_handles 
           : (formData.instructors_ig_handles ? [formData.instructors_ig_handles] : []),
@@ -639,6 +640,45 @@ const WorkshopForm = ({
       console.log("AR_ payload", payload , "v/s", formData);
 
       if (isUpdating) {
+        // If onUpdate callback is provided, use it instead of making API call directly
+        if (onUpdate) {
+          await onUpdate(payload);
+          // After update, handle image upload if needed
+          if (formData.workshopImage && entityId) {
+            try {
+              const formDataUpload = new FormData();
+              formDataUpload.append("images", formData.workshopImage);
+              formDataUpload.append("entity_id", entityId);
+
+              const iconResponse = await fetch(
+                `${baseUrlServer}imagesCrud/workshopIcon/`,
+                {
+                  method: "POST",
+                  body: formDataUpload,
+                }
+              );
+
+              if (iconResponse.ok) {
+                alert("Workshop and image updated successfully!");
+              } else {
+                alert(
+                  "Workshop saved but image upload failed. You can upload the image later."
+                );
+              }
+            } catch (iconError) {
+              console.error("Error uploading workshop image:", iconError);
+              alert(
+                "Workshop saved but image upload failed. You can upload the image later."
+              );
+            }
+          }
+          console.log("Workshop updated successfully, calling onSubmit callback");
+          clearForm();
+          onSubmit();
+          return;
+        }
+        
+        // Fallback to direct API call if onUpdate is not provided
         response = await fetch(
           `${baseUrlServer}crud/update_workshop/${entityId}`,
           {
