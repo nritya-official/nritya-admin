@@ -19,6 +19,12 @@ import {
   TextField,
   Link,
   CircularProgress,
+  Tabs,
+  Tab,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import {
   DateRange as DateRangeIcon,
@@ -53,11 +59,13 @@ const formatDateTime = (dateString) => {
 
 function WorkshopBookingMonitor() {
   const [mode, setMode] = useState("STAGING");
-  const [dateRange, setDateRange] = useState("7"); // 7, 30, 60, or "custom"
+  const [dateRange, setDateRange] = useState("7"); // 7, 30, 60, 180, 365, or "custom"
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [workshopIdFilter, setWorkshopIdFilter] = useState("");
+  const [viewMode, setViewMode] = useState(0); // 0: All Bookings, 1: Profile View
+  const [amountFilter, setAmountFilter] = useState("all"); // "all", "99", "149", "198"
   
   // Custom date range
   const [startDate, setStartDate] = useState("");
@@ -126,6 +134,64 @@ function WorkshopBookingMonitor() {
     if (!userId || !workshopId) return null;
     return `${baseUrlRender}workshopExperience/${userId}/${workshopId}`;
   };
+
+  // Helper function to get active filters text
+  const getActiveFiltersText = () => {
+    if (amountFilter === "all") {
+      return "";
+    }
+    return ` (Filtered: > ₹${amountFilter})`;
+  };
+
+  // Aggregate bookings by email+phone profile
+  const aggregateProfiles = (bookingsData) => {
+    const profileMap = new Map();
+    
+    bookingsData.forEach(booking => {
+      const email = booking.buyer_email || '';
+      const phone = booking.buyer_phone || '';
+      const profileKey = `${email}|${phone}`;
+      
+      if (!profileMap.has(profileKey)) {
+        profileMap.set(profileKey, {
+          email: email,
+          phone: phone,
+          name: booking.buyer_name || 'N/A',
+          bookingCount: 0,
+          totalAmount: 0,
+          lastBookingDate: null,
+          firstBookingDate: null,
+        });
+      }
+      
+      const profile = profileMap.get(profileKey);
+      profile.bookingCount += 1;
+      profile.totalAmount += booking.total_amount || 0;
+      
+      const bookingDate = booking.created_at ? new Date(booking.created_at) : null;
+      if (bookingDate) {
+        if (!profile.lastBookingDate || bookingDate > profile.lastBookingDate) {
+          profile.lastBookingDate = bookingDate;
+        }
+        if (!profile.firstBookingDate || bookingDate < profile.firstBookingDate) {
+          profile.firstBookingDate = bookingDate;
+        }
+      }
+    });
+    
+    // Convert map to array and sort by booking count (descending)
+    return Array.from(profileMap.values()).sort((a, b) => b.bookingCount - a.bookingCount);
+  };
+
+  // Aggregate and filter profiles based on amount filter
+  const allProfiles = viewMode === 1 ? aggregateProfiles(bookings) : [];
+  const profileData = viewMode === 1 ? (() => {
+    if (amountFilter === "all") {
+      return allProfiles;
+    }
+    const threshold = parseFloat(amountFilter);
+    return allProfiles.filter(profile => profile.totalAmount > threshold);
+  })() : [];
 
   return (
     <Box sx={{ p: 4, maxWidth: "100%", margin: "auto", fontFamily: "sans-serif" }}>
@@ -217,6 +283,7 @@ function WorkshopBookingMonitor() {
                   py: 1.5,
                   border: "2px solid",
                   borderColor: "divider",
+                  fontSize: "0.85rem",
                   "&.Mui-selected": {
                     backgroundColor: "primary.main",
                     color: "white",
@@ -236,6 +303,12 @@ function WorkshopBookingMonitor() {
               </ToggleButton>
               <ToggleButton value="60" aria-label="last 60 days">
                 Last 60 Days
+              </ToggleButton>
+              <ToggleButton value="180" aria-label="last 6 months">
+                Last 6 Months
+              </ToggleButton>
+              <ToggleButton value="365" aria-label="last 1 year">
+                Last 1 Year
               </ToggleButton>
               <ToggleButton value="custom" aria-label="custom range">
                 Custom Range
@@ -312,19 +385,128 @@ function WorkshopBookingMonitor() {
         </Box>
       )}
 
-      {/* Results Summary */}
+      {/* View Mode Toggle */}
       {!loading && bookings.length > 0 && (
-        <Box sx={{ mb: 2 }}>
-          <Chip
-            label={`Total Bookings: ${bookings.length}`}
-            color="primary"
-            sx={{ fontSize: "1rem", fontWeight: "bold", py: 2.5 }}
-          />
-        </Box>
+        <Card sx={{ mb: 3, boxShadow: 2 }}>
+          <CardContent>
+            <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+              <Tabs
+                value={viewMode}
+                onChange={(e, newValue) => setViewMode(newValue)}
+                aria-label="view mode tabs"
+                sx={{
+                  "& .MuiTab-root": {
+                    fontWeight: "bold",
+                    textTransform: "none",
+                    fontSize: "1rem",
+                  },
+                }}
+              >
+                <Tab label="All Bookings" />
+                <Tab label="Profile View (Email + Phone)" />
+              </Tabs>
+            </Box>
+            
+            {/* Amount Filter - Only shown in Profile View */}
+            {viewMode === 1 && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold", color: "text.secondary" }}>
+                  Filter by Total Amount
+                </Typography>
+                <FormControl sx={{ minWidth: 200 }} size="small">
+                  <InputLabel id="amount-filter-label">Amount Filter</InputLabel>
+                  <Select
+                    labelId="amount-filter-label"
+                    id="amount-filter"
+                    value={amountFilter}
+                    label="Amount Filter"
+                    onChange={(e) => setAmountFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">All</MenuItem>
+                    <MenuItem value="99">{"> ₹99"}</MenuItem>
+                    <MenuItem value="149">{"> ₹149"}</MenuItem>
+                    <MenuItem value="198">{"> ₹198"}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+            )}
+            
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+              {viewMode === 0 && (
+                <Chip
+                  label={`Total Bookings: ${bookings.length}`}
+                  color="primary"
+                  sx={{ fontSize: "1rem", fontWeight: "bold", py: 2.5 }}
+                />
+              )}
+              {viewMode === 1 && (
+                <Chip
+                  label={`Total Profiles: ${profileData.length} | Total Bookings: ${bookings.length}${getActiveFiltersText()}`}
+                  color="primary"
+                  sx={{ fontSize: "1rem", fontWeight: "bold", py: 2.5 }}
+                />
+              )}
+            </Box>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Bookings Table */}
-      {!loading && bookings.length > 0 && (
+      {/* Profile View Table */}
+      {!loading && viewMode === 1 && profileData.length > 0 && (
+        <TableContainer component={Paper} sx={{ mt: 2, boxShadow: 3 }}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                <TableCell sx={{ fontWeight: "bold" }}>Buyer Name</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Email</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Phone</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }} align="center">No. of Bookings</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }} align="right">Total Amount</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>First Booking</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Last Booking</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {profileData.map((profile, index) => (
+                <TableRow key={`${profile.email}|${profile.phone}|${index}`} sx={{ "&:hover": { backgroundColor: "#f9f9f9" } }}>
+                  <TableCell>{profile.name}</TableCell>
+                  <TableCell>
+                    <Link href={`mailto:${profile.email}`} underline="hover">
+                      {profile.email || "-"}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    {profile.phone ? (
+                      <Link href={`tel:${profile.phone}`} underline="hover">
+                        {profile.phone}
+                      </Link>
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Chip
+                      label={profile.bookingCount}
+                      color="primary"
+                      sx={{ fontWeight: "bold" }}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography sx={{ fontWeight: "bold", color: "success.main" }}>
+                      ₹{profile.totalAmount.toFixed(2)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{profile.firstBookingDate ? formatDateTime(profile.firstBookingDate.toISOString()) : "N/A"}</TableCell>
+                  <TableCell>{profile.lastBookingDate ? formatDateTime(profile.lastBookingDate.toISOString()) : "N/A"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* All Bookings Table */}
+      {!loading && viewMode === 0 && bookings.length > 0 && (
         <TableContainer component={Paper} sx={{ mt: 2, boxShadow: 3 }}>
           <Table>
             <TableHead>
@@ -427,11 +609,35 @@ function WorkshopBookingMonitor() {
           </Typography>
         </Box>
       )}
+
+      {/* No Profiles Message (Profile View) */}
+      {!loading && viewMode === 1 && bookings.length > 0 && profileData.length === 0 && (
+        <Box sx={{ textAlign: "center", py: 8 }}>
+          <Typography variant="h6" color="text.secondary">
+            {getActiveFiltersText() !== ""
+              ? "No profiles found matching the selected filters"
+              : "No profiles found"}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {getActiveFiltersText() !== ""
+              ? "Try adjusting the amount filters or selecting a different date range"
+              : "Unable to aggregate bookings by email and phone"}
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 }
 
 export default WorkshopBookingMonitor;
+
+
+
+
+
+
+
+
 
 
 
