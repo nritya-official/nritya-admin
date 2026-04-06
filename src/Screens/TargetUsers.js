@@ -19,7 +19,7 @@ import {
   Select,
   MenuItem,
 } from "@mui/material";
-import { Search as SearchIcon } from "@mui/icons-material";
+import { Search as SearchIcon, Email as EmailIcon } from "@mui/icons-material";
 import axios from "axios";
 
 const server = {
@@ -36,7 +36,9 @@ function TargetUsers() {
   const [workshopId, setWorkshopId] = useState("");
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const [sendInfo, setSendInfo] = useState(null);
 
   const baseUrl = server[mode];
 
@@ -59,6 +61,7 @@ function TargetUsers() {
     }
 
     const url = `${baseUrl}n_admin/target_users_recommendations/${id}/`;
+    setSendInfo(null);
     setLoading(true);
     try {
       const response = await axios.get(url);
@@ -86,6 +89,49 @@ function TargetUsers() {
       setError(typeof msg === "string" ? msg : JSON.stringify(msg));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendPromoEmails = async () => {
+    const id = workshopId.trim();
+    setError(null);
+    setSendInfo(null);
+
+    if (!id) {
+      setError("Enter a workshop ID (UUID) first.");
+      return;
+    }
+    if (!uuidPattern.test(id)) {
+      setError("Workshop ID must be a valid UUID.");
+      return;
+    }
+
+    const ok = window.confirm(
+      "Send the promotional HTML email to every target user for this workshop? " +
+        "Each person receives a separate message (no shared To/CC list)."
+    );
+    if (!ok) return;
+
+    const url = `${baseUrl}n_admin/target_users_recommendations/${id}/send/`;
+    setSending(true);
+    try {
+      const response = await axios.post(url);
+      const d = response.data || {};
+      setSendInfo({
+        sent: d.sent ?? 0,
+        total_recipients: d.total_recipients ?? 0,
+        skipped_invalid_email: d.skipped_invalid_email ?? 0,
+        failed: Array.isArray(d.failed) ? d.failed : [],
+      });
+    } catch (err) {
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        err.message ||
+        "Send failed";
+      setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+    } finally {
+      setSending(false);
     }
   };
 
@@ -126,7 +172,7 @@ function TargetUsers() {
           variant="contained"
           startIcon={loading ? null : <SearchIcon />}
           onClick={fetchTargetUsers}
-          disabled={loading}
+          disabled={loading || sending}
           sx={{ minWidth: 120 }}
         >
           {loading ? (
@@ -138,7 +184,42 @@ function TargetUsers() {
             "Load"
           )}
         </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={sending ? null : <EmailIcon />}
+          onClick={sendPromoEmails}
+          disabled={loading || sending || !workshopId.trim()}
+          sx={{ minWidth: 160, whiteSpace: "nowrap" }}
+        >
+          {sending ? (
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <CircularProgress size={18} color="inherit" />
+              <span>Sending…</span>
+            </Stack>
+          ) : (
+            "Send email promo"
+          )}
+        </Button>
       </Stack>
+
+      {sendInfo && (
+        <Alert
+          severity={sendInfo.failed?.length ? "warning" : "success"}
+          sx={{ mb: 2 }}
+          onClose={() => setSendInfo(null)}
+        >
+          Promo emails: sent {sendInfo.sent} of {sendInfo.total_recipients} target users.
+          {sendInfo.skipped_invalid_email > 0 &&
+            ` Skipped invalid email: ${sendInfo.skipped_invalid_email}.`}
+          {sendInfo.failed?.length > 0 && (
+            <span>
+              {" "}
+              Failed: {sendInfo.failed.length} (see server logs for details).
+            </span>
+          )}
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
