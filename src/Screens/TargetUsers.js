@@ -18,6 +18,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Chip,
 } from "@mui/material";
 import { Search as SearchIcon, Email as EmailIcon } from "@mui/icons-material";
 import axios from "axios";
@@ -74,6 +75,7 @@ function TargetUsers() {
         phone,
         buyer_name: u?.buyer_name ?? "",
         buyer_email: u?.buyer_email ?? "",
+        booked: Boolean(u?.booked),
         similarity_index:
           u?.similarity_index !== undefined && u?.similarity_index !== null
             ? Number(u.similarity_index)
@@ -121,6 +123,7 @@ function TargetUsers() {
         sent: d.sent ?? 0,
         total_recipients: d.total_recipients ?? 0,
         skipped_invalid_email: d.skipped_invalid_email ?? 0,
+        skipped_already_booked: d.skipped_already_booked ?? 0,
         failed: Array.isArray(d.failed) ? d.failed : [],
       });
     } catch (err) {
@@ -210,6 +213,8 @@ function TargetUsers() {
           onClose={() => setSendInfo(null)}
         >
           Promo emails: sent {sendInfo.sent} of {sendInfo.total_recipients} target users.
+          {sendInfo.skipped_already_booked > 0 &&
+            ` Already booked (skipped): ${sendInfo.skipped_already_booked}.`}
           {sendInfo.skipped_invalid_email > 0 &&
             ` Skipped invalid email: ${sendInfo.skipped_invalid_email}.`}
           {sendInfo.failed?.length > 0 && (
@@ -234,13 +239,14 @@ function TargetUsers() {
               <TableCell>Phone</TableCell>
               <TableCell>Name</TableCell>
               <TableCell>Email</TableCell>
+              <TableCell align="center">Booked</TableCell>
               <TableCell align="right">Similarity</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {sortedRows.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={5} align="center">
                   {workshopId.trim() ? "No users returned." : "Enter a workshop ID and click Load."}
                 </TableCell>
               </TableRow>
@@ -250,6 +256,13 @@ function TargetUsers() {
                 <TableCell>{r.phone}</TableCell>
                 <TableCell>{r.buyer_name}</TableCell>
                 <TableCell>{r.buyer_email}</TableCell>
+                <TableCell align="center">
+                  {r.booked ? (
+                    <Chip size="small" label="Yes" color="success" variant="outlined" />
+                  ) : (
+                    <Chip size="small" label="No" variant="outlined" />
+                  )}
+                </TableCell>
                 <TableCell align="right">
                   {r.similarity_index !== null && !Number.isNaN(r.similarity_index)
                     ? r.similarity_index.toFixed(2)
