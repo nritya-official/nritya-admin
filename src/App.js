@@ -33,6 +33,7 @@ import UserKycsNew from "./Screens/UserKycsNew";
 import Loader from "./Components/Loader";
 import PageTracking from "./Screens/PageTracking";
 import WorkshopBookingMonitor from "./Screens/WorkshopBookingMonitor";
+import TargetUsers from "./Screens/TargetUsers";
 
 const darkTheme = createTheme({
   palette: {
@@ -67,6 +68,7 @@ function App() {
                 <Route path="/carouselImgMgmt" element={<CarouselImgMgmt />} />
                 <Route path="/pageTracking" element={<PageTracking />} />
                 <Route path="/workshopBookings" element={<WorkshopBookingMonitor />} />
+                <Route path="/targetUsers" element={<TargetUsers />} />
                 <Route element={<ProtectedRoles roleInput={1} />}>
                   <Route path="/adminMgmt" element={<AdminMgmt />} />
                   <Route path="/data" element={<Data />} />
