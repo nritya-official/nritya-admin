@@ -24,6 +24,11 @@ import {
   Card,
   CardContent,
   Grid,
+  LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -108,8 +113,22 @@ function TargetUsers() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [sendInfo, setSendInfo] = useState(null);
+  const [promoJobProgress, setPromoJobProgress] = useState(null);
+  const [promoDialogOpen, setPromoDialogOpen] = useState(false);
+  /** confirm → user confirmed; running → async/sync in flight; success | error → terminal in dialog */
+  const [promoDialogStep, setPromoDialogStep] = useState("confirm");
+  const promoPollRef = useRef(null);
 
   const baseUrl = server[mode];
+
+  const stopPromoPoll = () => {
+    if (promoPollRef.current) {
+      clearInterval(promoPollRef.current);
+      promoPollRef.current = null;
+    }
+  };
+
+  useEffect(() => () => stopPromoPoll(), []);
 
   const filteredWorkshops = useMemo(() => {
     const q = workshopFilter.trim().toLowerCase();
@@ -255,34 +274,110 @@ function TargetUsers() {
     }
   };
 
-  const sendPromoEmails = async () => {
+  const openPromoDialog = () => {
     const id = workshopId.trim();
     setError(null);
-    setSendInfo(null);
-
     if (!id) {
       setError("Load a workshop first.");
       return;
     }
+    if (sortedRows.length === 0) {
+      setError("No target users loaded for this workshop.");
+      return;
+    }
+    stopPromoPoll();
+    setSendInfo(null);
+    setPromoJobProgress(null);
+    setPromoDialogStep("confirm");
+    setPromoDialogOpen(true);
+  };
 
-    const ok = window.confirm(
-      "Send the promotional HTML email to every target user for this workshop? " +
-        "Each person receives a separate message (no shared To/CC list)."
-    );
-    if (!ok) return;
+  const closePromoDialog = () => {
+    if (sending && promoDialogStep === "running") return;
+    stopPromoPoll();
+    setPromoDialogOpen(false);
+    setPromoDialogStep("confirm");
+    setPromoJobProgress(null);
+  };
 
+  const executePromoSend = async () => {
+    const id = workshopId.trim();
+    setError(null);
+    setSendInfo(null);
+    setPromoJobProgress(null);
+    stopPromoPoll();
+
+    if (!id) {
+      setError("Load a workshop first.");
+      setPromoDialogStep("error");
+      return;
+    }
+
+    setPromoDialogStep("running");
     const url = `${baseUrl}n_admin/target_users_recommendations/${id}/send/`;
     setSending(true);
+    let asyncPolling = false;
     try {
-      const response = await axios.post(url);
+      const response = await axios.post(url, { async: true });
       const d = response.data || {};
+
+      if (d.status === "queued" && d.job_id) {
+        asyncPolling = true;
+        setPromoJobProgress({ status: "queued", percent: 0, processed: 0, total: 0 });
+        const statusUrl = `${baseUrl}n_admin/target_users_recommendations/send/status/${d.job_id}/`;
+
+        const pollOnce = async () => {
+          try {
+            const { data } = await axios.get(statusUrl);
+            setPromoJobProgress(data);
+            if (data.status === "completed" || data.status === "failed") {
+              stopPromoPoll();
+              setSending(false);
+              setPromoJobProgress(null);
+              if (data.status === "failed") {
+                setError(data.error || "Promo job failed");
+                setPromoDialogStep("error");
+              } else {
+                setSendInfo({
+                  sent: data.sent ?? 0,
+                  total_recipients: data.total_recipients ?? 0,
+                  total_to_send: data.total ?? data.total_to_send ?? 0,
+                  skipped_invalid_email: data.skipped_invalid_email ?? 0,
+                  skipped_already_booked: data.skipped_already_booked ?? 0,
+                  skipped_duplicate_email: data.skipped_duplicate_email ?? 0,
+                  failed: Array.isArray(data.failed) ? data.failed : [],
+                });
+                setPromoDialogStep("success");
+              }
+            }
+          } catch (pollErr) {
+            stopPromoPoll();
+            setSending(false);
+            setPromoJobProgress(null);
+            const msg =
+              pollErr.response?.data?.error ||
+              pollErr.message ||
+              "Status poll failed";
+            setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+            setPromoDialogStep("error");
+          }
+        };
+
+        await pollOnce();
+        promoPollRef.current = setInterval(pollOnce, 1500);
+        return;
+      }
+
       setSendInfo({
         sent: d.sent ?? 0,
         total_recipients: d.total_recipients ?? 0,
+        total_to_send: d.total_to_send,
         skipped_invalid_email: d.skipped_invalid_email ?? 0,
         skipped_already_booked: d.skipped_already_booked ?? 0,
+        skipped_duplicate_email: d.skipped_duplicate_email ?? 0,
         failed: Array.isArray(d.failed) ? d.failed : [],
       });
+      setPromoDialogStep("success");
     } catch (err) {
       const msg =
         err.response?.data?.error ||
@@ -290,8 +385,11 @@ function TargetUsers() {
         err.message ||
         "Send failed";
       setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      setPromoDialogStep("error");
     } finally {
-      setSending(false);
+      if (!asyncPolling) {
+        setSending(false);
+      }
     }
   };
 
@@ -537,19 +635,12 @@ function TargetUsers() {
           <Button
             variant="contained"
             color="secondary"
-            startIcon={sending ? null : <EmailIcon />}
-            onClick={sendPromoEmails}
+            startIcon={<EmailIcon />}
+            onClick={openPromoDialog}
             disabled={loading || sending || sortedRows.length === 0}
             sx={{ minWidth: 180, whiteSpace: "nowrap" }}
           >
-            {sending ? (
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <CircularProgress size={18} color="inherit" />
-                <span>Sending…</span>
-              </Stack>
-            ) : (
-              "Send email promo"
-            )}
+            Send email promo
           </Button>
           <Chip
             label={`${sortedRows.length} target user${sortedRows.length === 1 ? "" : "s"}`}
@@ -558,6 +649,129 @@ function TargetUsers() {
           />
         </Stack>
       )}
+
+      <Dialog
+        open={promoDialogOpen}
+        onClose={() => {
+          if (promoDialogStep === "running" && sending) return;
+          closePromoDialog();
+        }}
+        maxWidth="sm"
+        fullWidth
+        disableEscapeKeyDown={promoDialogStep === "running" && sending}
+      >
+        <DialogTitle>Send email promo</DialogTitle>
+        <DialogContent dividers>
+          {promoDialogStep === "confirm" && (
+            <Stack spacing={2}>
+              <Typography variant="body2" color="text.secondary">
+                Send the promotional HTML email to recommended target users for:
+              </Typography>
+              <Typography variant="subtitle1" fontWeight={600}>
+                {selectedWorkshop?.name || "Workshop"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • {sortedRows.length} target user row{sortedRows.length === 1 ? "" : "s"} loaded (includes
+                booked + unbooked).
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • Each valid email receives its own message (no shared To/CC list).
+              </Typography>
+            </Stack>
+          )}
+
+          {promoDialogStep === "running" && (
+            <Stack spacing={2} sx={{ pt: 0.5 }}>
+              <Typography variant="subtitle2" color="text.secondary">
+                {promoJobProgress?.status === "queued"
+                  ? "Queued — waiting for worker…"
+                  : promoJobProgress
+                    ? `Status: ${promoJobProgress.status || "…"}`
+                    : "Starting job…"}
+              </Typography>
+              {promoJobProgress ? (
+                <LinearProgress
+                  variant="determinate"
+                  value={Math.min(100, Math.max(0, Number(promoJobProgress.percent) || 0))}
+                  sx={{ height: 8, borderRadius: 1 }}
+                />
+              ) : (
+                <LinearProgress sx={{ height: 8, borderRadius: 1 }} />
+              )}
+              <Typography variant="body2" color="text.secondary">
+                {promoJobProgress?.processed != null && promoJobProgress?.total != null
+                  ? `${promoJobProgress.processed} / ${promoJobProgress.total} emails processed (${Math.round(
+                      Number(promoJobProgress.percent) || 0
+                    )}%)`
+                  : "Connecting to job status…"}
+                {promoJobProgress?.sent != null && ` · Sent: ${promoJobProgress.sent}`}
+              </Typography>
+            </Stack>
+          )}
+
+          {promoDialogStep === "success" && sendInfo && (
+            <Stack spacing={1}>
+              <Typography color="success.main" fontWeight={600}>
+                Promo run finished
+              </Typography>
+              <Typography variant="body2">
+                Sent <strong>{sendInfo.sent}</strong>
+                {sendInfo.total_to_send != null ? (
+                  <> of {sendInfo.total_to_send} unique sends</>
+                ) : null}
+                . Target-user rows: {sendInfo.total_recipients}.
+              </Typography>
+              {sendInfo.skipped_already_booked > 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  Skipped (already booked): {sendInfo.skipped_already_booked}
+                </Typography>
+              )}
+              {sendInfo.skipped_invalid_email > 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  Skipped (invalid email): {sendInfo.skipped_invalid_email}
+                </Typography>
+              )}
+              {sendInfo.skipped_duplicate_email > 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  Skipped (duplicate email): {sendInfo.skipped_duplicate_email}
+                </Typography>
+              )}
+              {sendInfo.failed?.length > 0 && (
+                <Typography variant="body2" color="warning.main">
+                  Failed: {sendInfo.failed.length} (see server logs for details).
+                </Typography>
+              )}
+            </Stack>
+          )}
+
+          {promoDialogStep === "error" && error && (
+            <Alert severity="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+        </DialogContent>
+        {(promoDialogStep === "confirm" ||
+          promoDialogStep === "success" ||
+          promoDialogStep === "error") && (
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            {promoDialogStep === "confirm" && (
+              <>
+                <Button onClick={closePromoDialog} color="inherit">
+                  Cancel
+                </Button>
+                <Button variant="contained" color="secondary" onClick={executePromoSend} autoFocus>
+                  Send emails
+                </Button>
+              </>
+            )}
+            {(promoDialogStep === "success" || promoDialogStep === "error") && (
+              <Button variant="contained" onClick={closePromoDialog} fullWidth sx={{ maxWidth: 200, ml: "auto" }}>
+                Close
+              </Button>
+            )}
+          </DialogActions>
+        )}
+      </Dialog>
 
       {sendInfo && (
         <Alert
@@ -570,6 +784,8 @@ function TargetUsers() {
             ` Already booked (skipped): ${sendInfo.skipped_already_booked}.`}
           {sendInfo.skipped_invalid_email > 0 &&
             ` Skipped invalid email: ${sendInfo.skipped_invalid_email}.`}
+          {sendInfo.skipped_duplicate_email > 0 &&
+            ` Duplicate email (skipped extra sends): ${sendInfo.skipped_duplicate_email}.`}
           {sendInfo.failed?.length > 0 && (
             <span>
               {" "}
