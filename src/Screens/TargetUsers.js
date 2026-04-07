@@ -82,6 +82,17 @@ const formatWorkshopTime = (timeString) => {
   return `${hr12}:${min} ${isPM ? "PM" : "AM"} onwards`;
 };
 
+const toAmount = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+const formatInr = (value) => {
+  const n = toAmount(value);
+  if (n === null) return "TBA";
+  return `Rs ${n.toFixed(0)}`;
+};
+
 function TargetUsers() {
   const hasLoadedInitialWorkshops = useRef(false);
   const [mode, setMode] = useState("PRODUCTION");
@@ -92,6 +103,7 @@ function TargetUsers() {
   const [selectedWorkshop, setSelectedWorkshop] = useState(null);
   const [workshopId, setWorkshopId] = useState("");
   const [rows, setRows] = useState([]);
+  const [priceSummary, setPriceSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -126,6 +138,7 @@ function TargetUsers() {
     setSelectedWorkshop(null);
     setWorkshopId("");
     setRows([]);
+    setPriceSummary(null);
     setSendInfo(null);
 
     if (!cityName) {
@@ -197,7 +210,49 @@ function TargetUsers() {
     const id = workshop?.workshop_id || "";
     setSelectedWorkshop(workshop);
     setWorkshopId(id);
+    await fetchWorkshopPricing(workshop);
     await fetchTargetUsers(id);
+  };
+
+  const fetchWorkshopPricing = async (workshop) => {
+    const workshopIdLocal = workshop?.workshop_id;
+    const startingPrice = toAmount(workshop?.min_price);
+    if (!workshopIdLocal) {
+      setPriceSummary(null);
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${baseUrl}crud/discounts/${workshopIdLocal}/`);
+      const discounts = response.data?.discounts || [];
+      const active = discounts.find((d) => d?.is_active !== false) || null;
+      const discountType = (active?.discount_type || "").toLowerCase();
+      const discountValue = toAmount(active?.discount_value) || 0;
+
+      let flatDiscount = 0;
+      if (startingPrice !== null) {
+        if (discountType === "percentage") {
+          flatDiscount = (startingPrice * discountValue) / 100;
+        } else if (["flat", "flat_amount", "amount"].includes(discountType)) {
+          flatDiscount = discountValue;
+        }
+      }
+
+      const discountedPrice =
+        startingPrice !== null ? Math.max(0, startingPrice - flatDiscount) : null;
+
+      setPriceSummary({
+        startingPrice,
+        flatDiscount: flatDiscount > 0 ? flatDiscount : 0,
+        discountedPrice,
+      });
+    } catch (e) {
+      setPriceSummary({
+        startingPrice,
+        flatDiscount: 0,
+        discountedPrice: startingPrice,
+      });
+    }
   };
 
   const sendPromoEmails = async () => {
@@ -251,8 +306,20 @@ function TargetUsers() {
     const workshopTime =
       formatWorkshopTime(selectedWorkshop?.time || selectedWorkshop?.variants?.[0]?.time);
     const danceStyles = selectedWorkshop?.dance_styles || "Dance style TBA";
-    const detailsLine = `${workshopDate} | ${workshopTime} | ${danceStyles}`;
-    const message = `Hi ${greetingName}, this is Team Nritya. We would love to invite you to ${workshopName}.\n\n${detailsLine}${bookingLink ? `\n\nBook here: ${bookingLink}` : ""}\n\nLet us know if you need any help.`;
+    const detailsLine = `${workshopDate} | ${workshopTime} | ${danceStyles} |`;
+    const priceLine = priceSummary
+      ? `~₹${Math.round(priceSummary.startingPrice || 0)}~ ₹${Math.round(
+          priceSummary.discountedPrice || 0
+        )} onwards`
+      : "";
+    const bookNowLine = bookingLink ? `Book now: ${bookingLink}` : "";
+    const messageParts = [
+      `Hi ${greetingName}, this is Team Nritya. We would love to invite you to ${workshopName}.`,
+      detailsLine,
+    ];
+    if (priceLine) messageParts.push(priceLine);
+    if (bookNowLine) messageParts.push(bookNowLine);
+    const message = messageParts.join("\n\n");
     return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
   };
 
@@ -425,6 +492,26 @@ function TargetUsers() {
           Active workshop: <strong>{selectedWorkshop.name || "Untitled"}</strong> (
           {selectedWorkshop.workshop_id})
         </Alert>
+      )}
+
+      {selectedWorkshop && priceSummary && (
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mb: 2 }}>
+          <Chip
+            color="default"
+            variant="outlined"
+            label={`Starting: ${formatInr(priceSummary.startingPrice)}`}
+          />
+          <Chip
+            color="warning"
+            variant="outlined"
+            label={`Flat Discount: ${formatInr(priceSummary.flatDiscount)}`}
+          />
+          <Chip
+            color="success"
+            variant="outlined"
+            label={`Now: ${formatInr(priceSummary.discountedPrice)}`}
+          />
+        </Stack>
       )}
 
       <Divider sx={{ mb: 2 }} />
