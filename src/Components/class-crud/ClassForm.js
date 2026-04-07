@@ -15,11 +15,9 @@ import {
   FormControlLabel,
   Stack,
   Card,
-  CardContent,
 } from "@mui/material";
 import {
   CloseOutlined,
-  Delete,
 } from "@mui/icons-material";
 import { BASEURL_PROD } from "../../constants";
 import axios from "axios";
