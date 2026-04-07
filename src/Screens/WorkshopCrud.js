@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Box,
   Typography,
@@ -129,9 +129,10 @@ const getDraftStatus = (creationTimeString) => {
 };
 
 function WorkshopCrud() {
-  const [mode, setMode] = useState("STAGING");
-  const [searchType, setSearchType] = useState("EMAIL");
-  const [searchQuery, setSearchQuery] = useState("");
+  const hasAutoSearched = useRef(false);
+  const [mode, setMode] = useState("PRODUCTION");
+  const [searchType, setSearchType] = useState("CITY");
+  const [searchQuery, setSearchQuery] = useState("Gurugram");
   const [citySearchStatus, setCitySearchStatus] = useState("UPCOMING");
   const [creatorSearchStatus, setCreatorSearchStatus] = useState("UPCOMING");
   const [results, setResults] = useState([]);
@@ -572,6 +573,14 @@ function WorkshopCrud() {
     setCitySearchStatus("UPCOMING"); // Reset city search status
     setCreatorSearchStatus("UPCOMING"); // Reset creator search status
   };
+
+  useEffect(() => {
+    if (hasAutoSearched.current || currentWindow !== WINDOWS.DEFAULT) {
+      return;
+    }
+    hasAutoSearched.current = true;
+    handleSearch();
+  }, [currentWindow]);
 
   const handleDelete = (workshop) => {
     setWorkshopToDelete(workshop);

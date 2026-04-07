@@ -1,7 +1,7 @@
 import React, { useState, useContext }from 'react';
 import { Card, CardContent, Typography, Grid, CardActionArea, Button, TextField, Tooltip } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { PeopleAltOutlined, EventAvailableTwoTone, CurrencyExchangeTwoTone, BookOnlineTwoTone, BookTwoTone, SchoolTwoTone, PersonSearch, Image, DataObject, Dataset, AddModeratorTwoTone, AdminPanelSettingsSharp, Analytics, ReceiptLong, GroupAdd } from '@mui/icons-material'; // Import Material-UI icons
+import { PeopleAltOutlined, EventAvailableTwoTone, CurrencyExchangeTwoTone, BookOnlineTwoTone, BookTwoTone, SchoolTwoTone, PersonSearch, Image, DataObject, Dataset, AddModeratorTwoTone, AdminPanelSettingsSharp, Analytics, ReceiptLong, GroupAdd, Hub } from '@mui/icons-material'; // Import Material-UI icons
 import { verifyAdminAndRole } from '../utils/firebaseUtils';
 import {AuthContext} from '../context/AuthProvider';
 import { darkThemeStyles, lightThemeStyles } from '../constants';
@@ -41,6 +41,7 @@ function LandingPage() {
         { title: "Bookings", subtitle: "View and manage bookings here.", link: "/bookings", icon: <BookOnlineTwoTone /> },
         { title: "Workshop Bookings", subtitle: "Monitor workshop bookings with date filters.", link: "/workshopBookings", icon: <ReceiptLong /> },
         { title: "Target users", subtitle: "Recommendations by workshop ID (city + dance overlap).", link: "/targetUsers", icon: <GroupAdd /> },
+        { title: "Workshop Master", subtitle: "Workflow hub for Add/Update -> CRM -> Bookings.", link: "/workshopMaster", icon: <Hub /> },
         { title: "Instructors", subtitle: "View and manage instructors here.", link: "/instructors", icon: <PersonSearch /> },
         { title: "Admin Mgmt", subtitle: "View and manage admin here.", link: "/adminMgmt", icon: <AddModeratorTwoTone /> },
         { title: "Carousel Images", subtitle: "View and manage carousel images here.", link: "/carouselImgMgmt", icon: <Image /> },
