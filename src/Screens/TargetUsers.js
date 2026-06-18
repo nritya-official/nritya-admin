@@ -38,6 +38,7 @@ import {
 } from "@mui/icons-material";
 import axios from "axios";
 import citiesData from "../cities.json";
+import VirtualizedUserTable from "../Components/VirtualizedUserTable";
 
 const server = {
   PRODUCTION: "https://djserver-production-ffe37b1b53b5.herokuapp.com/",
@@ -818,56 +819,15 @@ function TargetUsers() {
             />
           </Stack>
           <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Phone</TableCell>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Email</TableCell>
-                  <TableCell align="center">Booked</TableCell>
-                  <TableCell align="right">WhatsApp</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedRows.length === 0 && !loading && (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center">
-                      {selectedWorkshop
-                        ? "No users returned for this workshop."
-                        : "Select a workshop to load target users."}
-                    </TableCell>
-                  </TableRow>
-                )}
-                {sortedRows.map((r) => (
-                  <TableRow key={r.phone}>
-                    <TableCell>{r.phone}</TableCell>
-                    <TableCell>{r.buyer_name}</TableCell>
-                    <TableCell>{r.buyer_email}</TableCell>
-                    <TableCell align="center">
-                      {r.booked ? (
-                        <Chip size="small" label="Yes" color="success" variant="outlined" />
-                      ) : (
-                        <Chip size="small" label="No" variant="outlined" />
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="success"
-                        startIcon={<WhatsAppIcon />}
-                        href={getWhatsAppLink(r.phone, r.buyer_name)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        disabled={!getWhatsAppLink(r.phone, r.buyer_name)}
-                      >
-                        Share
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {sortedRows.length === 0 && !loading ? (
+              <Box sx={{ p: 3, textAlign: "center" }}>
+                {selectedWorkshop
+                  ? "No users returned for this workshop."
+                  : "Select a workshop to load target users."}
+              </Box>
+            ) : (
+              <VirtualizedUserTable rows={sortedRows} getWhatsAppLink={getWhatsAppLink} />
+            )}
           </TableContainer>
         </CardContent>
       </Card>
