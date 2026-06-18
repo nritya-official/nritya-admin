@@ -1,5 +1,5 @@
-import { memo, useCallback } from "react";
-import { FixedSizeList as List } from "react-window";
+import { memo } from "react";
+import { List } from "react-window";
 import { Box, Button, Chip, Typography } from "@mui/material";
 import { WhatsApp as WhatsAppIcon } from "@mui/icons-material";
 
@@ -7,10 +7,14 @@ const ROW_HEIGHT = 52;
 const MAX_LIST_HEIGHT = 520;
 
 const VirtualUserRow = memo(function VirtualUserRow({
-  row,
+  index,
   style,
+  rows,
   getWhatsAppLink,
 }) {
+  const row = rows[index];
+  if (!row) return null;
+
   return (
     <Box
       style={style}
@@ -67,17 +71,6 @@ const VirtualUserRow = memo(function VirtualUserRow({
 export default function VirtualizedUserTable({ rows, getWhatsAppLink }) {
   const listHeight = Math.min(MAX_LIST_HEIGHT, Math.max(ROW_HEIGHT, rows.length * ROW_HEIGHT));
 
-  const RowRenderer = useCallback(
-    ({ index, style }) => (
-      <VirtualUserRow
-        row={rows[index]}
-        style={style}
-        getWhatsAppLink={getWhatsAppLink}
-      />
-    ),
-    [rows, getWhatsAppLink]
-  );
-
   if (rows.length === 0) {
     return null;
   }
@@ -103,14 +96,13 @@ export default function VirtualizedUserTable({ rows, getWhatsAppLink }) {
         <Box sx={{ flex: "0 0 12%", textAlign: "right" }}>WhatsApp</Box>
       </Box>
       <List
-        height={listHeight}
-        width="100%"
-        itemCount={rows.length}
-        itemSize={ROW_HEIGHT}
+        style={{ height: listHeight, width: "100%" }}
+        rowCount={rows.length}
+        rowHeight={ROW_HEIGHT}
         overscanCount={8}
-      >
-        {RowRenderer}
-      </List>
+        rowComponent={VirtualUserRow}
+        rowProps={{ rows, getWhatsAppLink }}
+      />
       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1, px: 1 }}>
         Showing {rows.length} users (virtualized — only visible rows are rendered)
       </Typography>
