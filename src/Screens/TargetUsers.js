@@ -109,6 +109,7 @@ function TargetUsers() {
   const [selectedWorkshop, setSelectedWorkshop] = useState(null);
   const [workshopId, setWorkshopId] = useState("");
   const [rows, setRows] = useState([]);
+  const [indexMeta, setIndexMeta] = useState(null);
   const [priceSummary, setPriceSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -142,7 +143,10 @@ function TargetUsers() {
   }, [workshops, workshopFilter]);
 
   const sortedRows = useMemo(
-    () => [...rows].sort((a, b) => (b.similarity_index ?? 0) - (a.similarity_index ?? 0)),
+    () =>
+      [...rows].sort(
+        (a, b) => (b.index ?? b.similarity_index ?? 0) - (a.index ?? a.similarity_index ?? 0)
+      ),
     [rows]
   );
   const bookedCount = useMemo(
@@ -158,6 +162,7 @@ function TargetUsers() {
     setSelectedWorkshop(null);
     setWorkshopId("");
     setRows([]);
+    setIndexMeta(null);
     setPriceSummary(null);
     setSendInfo(null);
 
@@ -187,6 +192,7 @@ function TargetUsers() {
     const id = (idInput || "").trim();
     setError(null);
     setRows([]);
+    setIndexMeta(null);
 
     if (!id) {
       setError("Select a workshop first.");
@@ -201,6 +207,7 @@ function TargetUsers() {
       const raw = response.data?.target_users;
       if (!raw || typeof raw !== "object") {
         setRows([]);
+        setIndexMeta(null);
         return;
       }
       const list = Object.entries(raw).map(([phone, u]) => ({
@@ -208,12 +215,23 @@ function TargetUsers() {
         buyer_name: u?.buyer_name ?? "",
         buyer_email: u?.buyer_email ?? "",
         booked: Boolean(u?.booked),
+        index:
+          u?.index !== undefined && u?.index !== null
+            ? Number(u.index)
+            : u?.similarity_index !== undefined && u?.similarity_index !== null
+              ? Number(u.similarity_index)
+              : null,
         similarity_index:
           u?.similarity_index !== undefined && u?.similarity_index !== null
             ? Number(u.similarity_index)
             : null,
+        score_breakdown: u?.score_breakdown ?? null,
+        matched_styles: Array.isArray(u?.matched_styles) ? u.matched_styles : [],
+        matching_bookings_count: u?.matching_bookings_count ?? 0,
+        last_matching_booking: u?.last_matching_booking ?? null,
       }));
       setRows(list);
+      setIndexMeta(response.data?.meta ?? null);
     } catch (err) {
       const msg =
         err.response?.data?.error ||
@@ -457,6 +475,7 @@ function TargetUsers() {
                     setSelectedWorkshop(null);
                     setWorkshopId("");
                     setRows([]);
+                    setIndexMeta(null);
                     setSendInfo(null);
                   }}
                 >
@@ -812,6 +831,15 @@ function TargetUsers() {
             sx={{ mb: 1.5 }}
           >
             <Typography variant="h6">Recommended Target Users</Typography>
+            {indexMeta?.index_formula && (
+              <Chip
+                size="small"
+                variant="outlined"
+                color="secondary"
+                label={indexMeta.index_formula}
+                sx={{ maxWidth: { xs: "100%", sm: 420 } }}
+              />
+            )}
             <Chip
               color="info"
               variant="outlined"
