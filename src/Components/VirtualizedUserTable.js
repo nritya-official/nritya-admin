@@ -33,15 +33,6 @@ const formatBreakdownTooltip = (row) => {
   return lines.join("\n");
 };
 
-const BreakdownLine = memo(function BreakdownLine({ breakdown }) {
-  if (!breakdown) return null;
-  return (
-    <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.2 }}>
-      S{formatIndex(breakdown.style)} · R{formatIndex(breakdown.recency)} · A{formatIndex(breakdown.activity)}
-    </Typography>
-  );
-});
-
 const VirtualUserRow = memo(function VirtualUserRow({
   index: rowIndex,
   style,
@@ -82,31 +73,39 @@ const VirtualUserRow = memo(function VirtualUserRow({
             sx={{ fontWeight: 600, cursor: "help" }}
           />
         </Tooltip>
-        <BreakdownLine breakdown={row.score_breakdown} />
       </Box>
-      <Box sx={{ flex: "0 0 13%", minWidth: 0, pr: 1 }}>
+      <Box sx={{ flex: "0 0 8%", minWidth: 0, pr: 1 }}>
+        <Typography variant="body2">{formatIndex(row.score_breakdown?.style)}</Typography>
+      </Box>
+      <Box sx={{ flex: "0 0 8%", minWidth: 0, pr: 1 }}>
+        <Typography variant="body2">{formatIndex(row.score_breakdown?.recency)}</Typography>
+      </Box>
+      <Box sx={{ flex: "0 0 8%", minWidth: 0, pr: 1 }}>
+        <Typography variant="body2">{formatIndex(row.score_breakdown?.activity)}</Typography>
+      </Box>
+      <Box sx={{ flex: "0 0 11%", minWidth: 0, pr: 1 }}>
         <Typography variant="body2" noWrap title={row.phone}>
           {row.phone}
         </Typography>
       </Box>
-      <Box sx={{ flex: "0 0 14%", minWidth: 0, pr: 1 }}>
+      <Box sx={{ flex: "0 0 12%", minWidth: 0, pr: 1 }}>
         <Typography variant="body2" noWrap title={row.buyer_name}>
           {row.buyer_name}
         </Typography>
       </Box>
-      <Box sx={{ flex: "1 1 22%", minWidth: 0, pr: 1 }}>
+      <Box sx={{ flex: "1 1 18%", minWidth: 0, pr: 1 }}>
         <Typography variant="body2" noWrap title={row.buyer_email}>
           {row.buyer_email}
         </Typography>
       </Box>
-      <Box sx={{ flex: "0 0 8%", textAlign: "center" }}>
+      <Box sx={{ flex: "0 0 7%", textAlign: "center" }}>
         {row.booked ? (
           <Chip size="small" label="Yes" color="success" variant="outlined" />
         ) : (
           <Chip size="small" label="No" variant="outlined" />
         )}
       </Box>
-      <Box sx={{ flex: "0 0 11%", textAlign: "right" }}>
+      <Box sx={{ flex: "0 0 10%", textAlign: "right" }}>
         <Button
           size="small"
           variant="outlined"
@@ -148,11 +147,14 @@ export default function VirtualizedUserTable({ rows, getWhatsAppLink }) {
       >
         <Box sx={{ flex: "0 0 8%" }}>#</Box>
         <Box sx={{ flex: "0 0 12%" }}>Index</Box>
-        <Box sx={{ flex: "0 0 13%" }}>Phone</Box>
-        <Box sx={{ flex: "0 0 14%" }}>Name</Box>
-        <Box sx={{ flex: "1 1 22%" }}>Email</Box>
-        <Box sx={{ flex: "0 0 8%", textAlign: "center" }}>Booked</Box>
-        <Box sx={{ flex: "0 0 11%", textAlign: "right" }}>WhatsApp</Box>
+        <Box sx={{ flex: "0 0 8%" }}>Style</Box>
+        <Box sx={{ flex: "0 0 8%" }}>Recency</Box>
+        <Box sx={{ flex: "0 0 8%" }}>Activity</Box>
+        <Box sx={{ flex: "0 0 11%" }}>Phone</Box>
+        <Box sx={{ flex: "0 0 12%" }}>Name</Box>
+        <Box sx={{ flex: "1 1 18%" }}>Email</Box>
+        <Box sx={{ flex: "0 0 7%", textAlign: "center" }}>Booked</Box>
+        <Box sx={{ flex: "0 0 10%", textAlign: "right" }}>WhatsApp</Box>
       </Box>
       <List
         style={{ height: listHeight, width: "100%" }}
@@ -163,7 +165,7 @@ export default function VirtualizedUserTable({ rows, getWhatsAppLink }) {
         rowProps={{ rows, getWhatsAppLink }}
       />
       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1, px: 1 }}>
-        S = Style · R = Recency · A = Activity — hover index for full breakdown
+        Hover index for full breakdown (matched styles, count, and last matching booking)
       </Typography>
     </Box>
   );

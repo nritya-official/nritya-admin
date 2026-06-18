@@ -69,3 +69,51 @@ In the Target Users table:
 ## Environment URLs
 
 Each screen defines server URLs inline (Production Heroku, Staging Heroku, Local `127.0.0.1:8000`).
+
+## Other Admin Pathways
+
+The admin app supports multiple operational flows beyond Target Users CRM.
+
+### Workshop Operations
+
+- **Workshop Master:** `#/workshopMaster`  
+  Central launchpad for workshop lifecycle actions.
+- **Workshop CRUD:** `#/workshopsCrud`  
+  Create/update workshop metadata, pricing, and listing details.
+- **Workshop Bookings Monitor:** `#/workshopBookings`  
+  Track workshop booking records and payment-linked booking status.
+
+### Studio Operations
+
+- **Studio CRUD:** `#/studiosCrud`  
+  Manage studio profiles, availability metadata, and associated entities.
+- **Studios Listing:** `#/studios`  
+  Quick view and navigation for studio-related workflows.
+
+### Payments and Transactions
+
+- **Transactions:** `#/transactions`  
+  Filterable transaction dashboard with server-side pagination.
+- **Bookings / Tickets:** `#/bookings`, `#/tickets`  
+  Booking-level and ticket-level operational follow-up screens.
+
+### Governance and Quality
+
+- **User KYC:** `#/user-kycs`  
+  Review and process KYC approvals.
+- **Ratings / Reviews (via CRUD routes):**  
+  Creator, organiser, studio, and workshop feedback operations are exposed through backend CRUD APIs consumed by admin workflows.
+
+### Growth and Analytics
+
+- **Page Tracking:** `#/pageTracking`  
+  Engagement and traffic snapshots for campaign/organic trends.
+- **Carousel Management:** `#/carouselImgMgmt`  
+  Homepage visual merchandising updates.
+
+### Access and Admin Controls
+
+- **Admin Management (role-protected):** `#/adminMgmt`  
+  Super-admin-only controls for admin access management.
+- **Data tools (role-protected):** `#/data`  
+  Internal utilities for controlled data operations.
