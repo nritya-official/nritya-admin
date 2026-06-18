@@ -1,70 +1,71 @@
-# Getting Started with Create React App
+# Nritya Admin
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Internal admin dashboard for Nritya operations (workshops, bookings, CRM, KYC, and more).
 
-## Available Scripts
+Deployed via GitHub Pages: [nritya-admin](https://nritya-official.github.io/nritya-admin/) (HashRouter — routes use `#/…`).
 
-In the project directory, you can run:
+## Setup
 
-### `npm start`
+```bash
+npm install
+npm start          # http://localhost:3000
+npm run build      # production build
+npm run deploy     # build + gh-pages deploy
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Target Users CRM
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+**Route:** `#/targetUsers`
 
-### `npm test`
+Finds dancers to invite to a workshop using booking history from the Django API.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```
+GET {server}n_admin/target_users_recommendations/{workshop_id}/
+```
 
-### `npm run build`
+Users are returned **sorted by index (highest first)**.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Index formula
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Each target user gets a composite **index** used for CRM prioritization:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```
+index = 0.5 × style + 0.3 × recency + 0.2 × activity
+```
 
-### `npm run eject`
+| Signal | Weight | What it measures |
+|--------|--------|------------------|
+| **Style** | 50% | How well the user's booked dance styles match the target workshop (exact style → related style → same cluster) |
+| **Recency** | 30% | How recently they booked a matching workshop in the same city (exponential decay, 45-day half-life) |
+| **Activity** | 20% | How many matching bookings in the last 180 days (normalized: 5+ bookings → 1.0) |
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### API fields (per user)
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+| Field | Description |
+|-------|-------------|
+| `index` | Composite score (0–1), higher = better CRM target |
+| `similarity_index` | Same as `index` (kept for backward compatibility) |
+| `score_breakdown` | `{ style, recency, activity }` — raw signal values before weighting |
+| `matched_styles` | Dance styles that matched the target workshop |
+| `matching_bookings_count` | Relevant bookings in the last 180 days |
+| `last_matching_booking` | ISO timestamp of most recent matching booking |
+| `booked` | `true` if already registered for this workshop (skip outreach) |
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### UI legend
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+In the Target Users table:
 
-## Learn More
+- **Index chip** — composite score (green ≥ 0.8, amber ≥ 0.5)
+- **S · R · A** — style, recency, activity breakdown
+- Hover the index chip for full details (matched styles, booking count, last booking)
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Workflow
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+1. Select environment (Production / Staging / Local)
+2. Pick city → load upcoming workshops
+3. Select a workshop → target users load sorted by index
+4. Contact high-index users who are not yet booked (`booked: false`) via email promo or WhatsApp
 
-### Code Splitting
+## Environment URLs
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Each screen defines server URLs inline (Production Heroku, Staging Heroku, Local `127.0.0.1:8000`).
