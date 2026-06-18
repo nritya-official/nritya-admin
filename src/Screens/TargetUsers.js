@@ -29,6 +29,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  ToggleButton,
+  ToggleButtonGroup,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -39,6 +43,7 @@ import {
 import axios from "axios";
 import citiesData from "../cities.json";
 import VirtualizedUserTable from "../Components/VirtualizedUserTable";
+import ClusteredUserView from "../Components/ClusteredUserView";
 
 const server = {
   PRODUCTION: "https://djserver-production-ffe37b1b53b5.herokuapp.com/",
@@ -110,6 +115,8 @@ function TargetUsers() {
   const [workshopId, setWorkshopId] = useState("");
   const [rows, setRows] = useState([]);
   const [indexMeta, setIndexMeta] = useState(null);
+  const [viewMode, setViewMode] = useState("list");
+  const [hideBooked, setHideBooked] = useState(false);
   const [priceSummary, setPriceSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -152,6 +159,10 @@ function TargetUsers() {
   const bookedCount = useMemo(
     () => sortedRows.filter((r) => Boolean(r.booked)).length,
     [sortedRows]
+  );
+  const visibleRows = useMemo(
+    () => (hideBooked ? sortedRows.filter((r) => !r.booked) : sortedRows),
+    [sortedRows, hideBooked]
   );
 
   const fetchUpcomingWorkshops = async (chosenCity = city) => {
@@ -840,23 +851,56 @@ function TargetUsers() {
                 sx={{ maxWidth: { xs: "100%", sm: 420 } }}
               />
             )}
+            <Box sx={{ flexGrow: 1 }} />
             <Chip
               color="info"
               variant="outlined"
               label={`Booked ${bookedCount}/${sortedRows.length}`}
             />
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={viewMode}
+              onChange={(e, val) => val && setViewMode(val)}
+            >
+              <ToggleButton value="list">List</ToggleButton>
+              <ToggleButton value="clusters">Clusters</ToggleButton>
+            </ToggleButtonGroup>
           </Stack>
-          <TableContainer component={Paper} variant="outlined">
-            {sortedRows.length === 0 && !loading ? (
-              <Box sx={{ p: 3, textAlign: "center" }}>
-                {selectedWorkshop
+
+          {sortedRows.length > 0 && (
+            <FormControlLabel
+              sx={{ mb: 1 }}
+              control={
+                <Switch
+                  size="small"
+                  checked={hideBooked}
+                  onChange={(e) => setHideBooked(e.target.checked)}
+                />
+              }
+              label={
+                <Typography variant="body2" color="text.secondary">
+                  Hide already booked ({bookedCount})
+                </Typography>
+              }
+            />
+          )}
+
+          {visibleRows.length === 0 && !loading ? (
+            <Box sx={{ p: 3, textAlign: "center" }}>
+              {!selectedWorkshop
+                ? "Select a workshop to load target users."
+                : sortedRows.length === 0
                   ? "No users returned for this workshop."
-                  : "Select a workshop to load target users."}
-              </Box>
-            ) : (
-              <VirtualizedUserTable rows={sortedRows} getWhatsAppLink={getWhatsAppLink} />
-            )}
-          </TableContainer>
+                  : "All loaded users are already booked. Turn off the filter to see them."}
+            </Box>
+          ) : viewMode === "clusters" ? (
+            <ClusteredUserView rows={visibleRows} getWhatsAppLink={getWhatsAppLink} />
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <VirtualizedUserTable rows={visibleRows} getWhatsAppLink={getWhatsAppLink} />
+            </TableContainer>
+          )}
         </CardContent>
       </Card>
     </Box>
