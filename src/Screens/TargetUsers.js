@@ -19,6 +19,9 @@ import {
   Select,
   MenuItem,
   Chip,
+  Checkbox,
+  ListItemText,
+  OutlinedInput,
   Autocomplete,
   Divider,
   Card,
@@ -104,6 +107,22 @@ const formatInr = (value) => {
   return `Rs ${n.toFixed(0)}`;
 };
 
+const TIER_OPTIONS = [
+  { value: "hot", label: "Hot (≥ 0.80)" },
+  { value: "warm", label: "Warm (0.50 – 0.79)" },
+  { value: "cold", label: "Cold (< 0.50)" },
+  { value: "all", label: "All tiers" },
+];
+
+const tierKey = (row) => {
+  const idx = row.index ?? row.similarity_index ?? 0;
+  if (idx >= 0.8) return "hot";
+  if (idx >= 0.5) return "warm";
+  return "cold";
+};
+
+const tierLabel = (key) => TIER_OPTIONS.find((t) => t.value === key)?.label || key;
+
 function TargetUsers() {
   const hasLoadedInitialWorkshops = useRef(false);
   const [mode, setMode] = useState("PRODUCTION");
@@ -117,6 +136,8 @@ function TargetUsers() {
   const [indexMeta, setIndexMeta] = useState(null);
   const [viewMode, setViewMode] = useState("list");
   const [hideBooked, setHideBooked] = useState(false);
+  const [promoTiers, setPromoTiers] = useState(["hot"]);
+  const [promoDryRun, setPromoDryRun] = useState(false);
   const [priceSummary, setPriceSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -164,6 +185,31 @@ function TargetUsers() {
     () => (hideBooked ? sortedRows.filter((r) => !r.booked) : sortedRows),
     [sortedRows, hideBooked]
   );
+
+  const promoAllTiers = promoTiers.includes("all");
+  const promoRecipients = useMemo(
+    () =>
+      sortedRows.filter((r) => {
+        if (r.booked) return false;
+        if (!r.buyer_email) return false;
+        if (promoAllTiers) return true;
+        return promoTiers.includes(tierKey(r));
+      }),
+    [sortedRows, promoTiers, promoAllTiers]
+  );
+
+  const handleTierChange = (event) => {
+    const value =
+      typeof event.target.value === "string"
+        ? event.target.value.split(",")
+        : event.target.value;
+    if (value.includes("all") && !promoTiers.includes("all")) {
+      setPromoTiers(["all"]);
+      return;
+    }
+    const filtered = value.filter((v) => v !== "all");
+    setPromoTiers(filtered.length ? filtered : ["hot"]);
+  };
 
   const fetchUpcomingWorkshops = async (chosenCity = city) => {
     const cityName = (chosenCity || "").trim();
@@ -348,7 +394,11 @@ function TargetUsers() {
     setSending(true);
     let asyncPolling = false;
     try {
-      const response = await axios.post(url, { async: true });
+      const body = { async: !promoDryRun, dry_run: promoDryRun };
+      if (!promoAllTiers) {
+        body.tiers = promoTiers;
+      }
+      const response = await axios.post(url, body);
       const d = response.data || {};
 
       if (d.status === "queued" && d.job_id) {
@@ -375,6 +425,7 @@ function TargetUsers() {
                   skipped_invalid_email: data.skipped_invalid_email ?? 0,
                   skipped_already_booked: data.skipped_already_booked ?? 0,
                   skipped_duplicate_email: data.skipped_duplicate_email ?? 0,
+                  skipped_filtered: data.skipped_filtered ?? 0,
                   failed: Array.isArray(data.failed) ? data.failed : [],
                 });
                 setPromoDialogStep("success");
@@ -399,12 +450,15 @@ function TargetUsers() {
       }
 
       setSendInfo({
+        dry_run: Boolean(d.dry_run),
+        recipients: Array.isArray(d.recipients) ? d.recipients : null,
         sent: d.sent ?? 0,
         total_recipients: d.total_recipients ?? 0,
         total_to_send: d.total_to_send,
         skipped_invalid_email: d.skipped_invalid_email ?? 0,
         skipped_already_booked: d.skipped_already_booked ?? 0,
         skipped_duplicate_email: d.skipped_duplicate_email ?? 0,
+        skipped_filtered: d.skipped_filtered ?? 0,
         failed: Array.isArray(d.failed) ? d.failed : [],
       });
       setPromoDialogStep("success");
@@ -701,6 +755,55 @@ function TargetUsers() {
               <Typography variant="subtitle1" fontWeight={600}>
                 {selectedWorkshop?.name || "Workshop"}
               </Typography>
+
+              <FormControl size="small" fullWidth>
+                <InputLabel id="promo-tier-label">Send to tiers</InputLabel>
+                <Select
+                  labelId="promo-tier-label"
+                  multiple
+                  value={promoTiers}
+                  onChange={handleTierChange}
+                  input={<OutlinedInput label="Send to tiers" />}
+                  renderValue={(selected) => (
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                      {selected.map((v) => (
+                        <Chip key={v} size="small" label={tierLabel(v)} />
+                      ))}
+                    </Stack>
+                  )}
+                >
+                  {TIER_OPTIONS.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      <Checkbox checked={promoTiers.indexOf(opt.value) > -1} />
+                      <ListItemText primary={opt.label} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <Alert severity={promoRecipients.length === 0 ? "warning" : "info"}>
+                {promoAllTiers
+                  ? `All eligible (unbooked) users across every tier will be emailed.`
+                  : `Tier filter active — only the selected tier(s) will be emailed.`}{" "}
+                <strong>{promoRecipients.length}</strong> recipient
+                {promoRecipients.length === 1 ? "" : "s"} match (booked users are always excluded).
+              </Alert>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    size="small"
+                    checked={promoDryRun}
+                    onChange={(e) => setPromoDryRun(e.target.checked)}
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    Dry run — log the email list &amp; count only, send nothing
+                  </Typography>
+                }
+              />
+
               <Typography variant="body2" color="text.secondary">
                 • {sortedRows.length} target user row{sortedRows.length === 1 ? "" : "s"} loaded (includes
                 booked + unbooked).
@@ -742,16 +845,53 @@ function TargetUsers() {
 
           {promoDialogStep === "success" && sendInfo && (
             <Stack spacing={1}>
-              <Typography color="success.main" fontWeight={600}>
-                Promo run finished
-              </Typography>
-              <Typography variant="body2">
-                Sent <strong>{sendInfo.sent}</strong>
-                {sendInfo.total_to_send != null ? (
-                  <> of {sendInfo.total_to_send} unique sends</>
-                ) : null}
-                . Target-user rows: {sendInfo.total_recipients}.
-              </Typography>
+              {sendInfo.dry_run ? (
+                <>
+                  <Typography color="info.main" fontWeight={600}>
+                    Dry run — no emails sent
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>{sendInfo.total_to_send ?? sendInfo.recipients?.length ?? 0}</strong>{" "}
+                    recipient
+                    {(sendInfo.total_to_send ?? sendInfo.recipients?.length ?? 0) === 1 ? "" : "s"}{" "}
+                    would be emailed. Target-user rows: {sendInfo.total_recipients}.
+                  </Typography>
+                  {Array.isArray(sendInfo.recipients) && sendInfo.recipients.length > 0 && (
+                    <Box
+                      sx={{
+                        maxHeight: 220,
+                        overflow: "auto",
+                        bgcolor: "action.hover",
+                        borderRadius: 1,
+                        p: 1,
+                      }}
+                    >
+                      {sendInfo.recipients.map((em) => (
+                        <Typography
+                          key={em}
+                          variant="caption"
+                          sx={{ display: "block", fontFamily: "monospace" }}
+                        >
+                          {em}
+                        </Typography>
+                      ))}
+                    </Box>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Typography color="success.main" fontWeight={600}>
+                    Promo run finished
+                  </Typography>
+                  <Typography variant="body2">
+                    Sent <strong>{sendInfo.sent}</strong>
+                    {sendInfo.total_to_send != null ? (
+                      <> of {sendInfo.total_to_send} unique sends</>
+                    ) : null}
+                    . Target-user rows: {sendInfo.total_recipients}.
+                  </Typography>
+                </>
+              )}
               {sendInfo.skipped_already_booked > 0 && (
                 <Typography variant="body2" color="text.secondary">
                   Skipped (already booked): {sendInfo.skipped_already_booked}
@@ -765,6 +905,11 @@ function TargetUsers() {
               {sendInfo.skipped_duplicate_email > 0 && (
                 <Typography variant="body2" color="text.secondary">
                   Skipped (duplicate email): {sendInfo.skipped_duplicate_email}
+                </Typography>
+              )}
+              {sendInfo.skipped_filtered > 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  Skipped (outside selected tiers): {sendInfo.skipped_filtered}
                 </Typography>
               )}
               {sendInfo.failed?.length > 0 && (
@@ -790,8 +935,15 @@ function TargetUsers() {
                 <Button onClick={closePromoDialog} color="inherit">
                   Cancel
                 </Button>
-                <Button variant="contained" color="secondary" onClick={executePromoSend} autoFocus>
-                  Send emails
+                <Button
+                  variant="contained"
+                  color={promoDryRun ? "info" : "secondary"}
+                  onClick={executePromoSend}
+                  disabled={promoRecipients.length === 0}
+                  autoFocus
+                >
+                  {promoDryRun ? "Run dry run" : "Send emails"}
+                  {promoRecipients.length ? ` (${promoRecipients.length})` : ""}
                 </Button>
               </>
             )}
@@ -806,12 +958,14 @@ function TargetUsers() {
 
       {sendInfo && (
         <Alert
-          severity={sendInfo.failed?.length ? "warning" : "success"}
+          severity={sendInfo.dry_run ? "info" : sendInfo.failed?.length ? "warning" : "success"}
           sx={{ mb: 2 }}
           onClose={() => setSendInfo(null)}
         >
-          Promo emails: sent {sendInfo.sent} of {sendInfo.total_recipients} target users.
-          {sendInfo.skipped_already_booked > 0 &&
+          {sendInfo.dry_run
+            ? `Dry run: ${sendInfo.total_to_send ?? sendInfo.recipients?.length ?? 0} recipient(s) would be emailed (nothing sent).`
+            : `Promo emails: sent ${sendInfo.sent} of ${sendInfo.total_recipients} target users.`}
+          {!sendInfo.dry_run && sendInfo.skipped_already_booked > 0 &&
             ` Already booked (skipped): ${sendInfo.skipped_already_booked}.`}
           {sendInfo.skipped_invalid_email > 0 &&
             ` Skipped invalid email: ${sendInfo.skipped_invalid_email}.`}
