@@ -660,7 +660,7 @@ function WorkshopCrud() {
   const handleRevenue = (workshop) => {
     // Set the selected workshop for revenue display
     setSelectedWorkshop(workshop);
-    setCurrentWindow('WORKSHOP_REVENUE');
+    setCurrentWindow(WINDOWS.WORKSHOP_REVENUE);
   };
 
   // Discount management handlers
