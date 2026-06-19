@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BASEURL_PROD } from '../constants';
 
-const WorkshopRevenueTable = ({ workshopId }) => {
+const WorkshopRevenueTable = ({ workshopId, baseUrlServer }) => {
   const [revenueData, setRevenueData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -10,7 +10,8 @@ const WorkshopRevenueTable = ({ workshopId }) => {
     const fetchRevenueData = async () => {
       try {
         setLoading(true);
-        const url = `${BASEURL_PROD}payments/workshop_revenue/${workshopId}`;
+        const baseUrl = baseUrlServer || BASEURL_PROD;
+        const url = `${baseUrl}payments/workshop_revenue/${workshopId}`;
         console.log(url);
         const response = await fetch(url);
         const data = await response.json();
@@ -30,7 +31,7 @@ const WorkshopRevenueTable = ({ workshopId }) => {
     if (workshopId) {
       fetchRevenueData();
     }
-  }, [workshopId]);
+  }, [workshopId, baseUrlServer]);
 
   const calculateTotals = (workshopData) => {
     let totalRevenue = 0;

@@ -821,7 +821,7 @@ function WorkshopCrud() {
               Workshop Revenue: {selectedWorkshop?.name || 'Loading...'}
             </Typography>
           </Box>
-          <WorkshopRevenueTable workshopId={selectedWorkshop?.workshop_id} />
+          <WorkshopRevenueTable workshopId={selectedWorkshop?.workshop_id} baseUrlServer={baseUrlServer} />
         </Box>
       )}
 
