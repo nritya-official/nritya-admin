@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -27,11 +27,16 @@ import {
   Search as SearchIcon,
   Email as EmailIcon,
   LocationOn as LocationIcon,
+  Map as MapIcon,
+  ViewList as ListIcon,
 } from "@mui/icons-material";
 import axios from "axios";
 import AddStudio from "../Components/studio-crud/AddStudio";
+import AdminEntityMap, { parseGeo } from "../Components/AdminEntityMap";
 import { updateDaysFormat } from "../utils/mapping";
 import citiesData from "../cities.json";
+
+const STUDIO_ICON = "https://cdn.jsdelivr.net/gh/nritya-official/nritya@main/dance_studio.webp";
 
 const WINDOWS = {
   DEFAULT: "default",
@@ -123,9 +128,33 @@ function StudioCrud() {
   const [isSubmited, setIsSubmited] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
+  const [resultView, setResultView] = useState("list"); // 'list' | 'map'
 
   const baseUrlServer = server[mode];
   const baseUrlRender = render[mode];
+
+  const mapItems = useMemo(
+    () =>
+      (results || [])
+        .map((studio) => {
+          const geo = parseGeo(studio.geolocation);
+          if (!geo) return null;
+          return {
+            key: studio.id,
+            geo,
+            name: studio.studioName || "Unnamed Studio",
+            image: studio.iconUrl || STUDIO_ICON,
+            addressLine: [studio.street, studio.city].filter(Boolean).join(", "),
+            meta: studio.creatorEmail || "",
+            badge: studio.status || null,
+            viewUrl: `${baseUrlRender}#/studio/${studio.id}`,
+            ctaLabel: "Edit",
+            _raw: studio,
+          };
+        })
+        .filter(Boolean),
+    [results, baseUrlRender]
+  );
 
   const [formData, setFormData] = useState(initialData);
   const [errors, setErrors] = useState({});
@@ -532,7 +561,37 @@ function StudioCrud() {
             )}
 
             {results.length > 0 && (
-              <TableContainer component={Paper} sx={{ mt: 4 }}>
+              <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 4, mb: 1 }}>
+                <ToggleButtonGroup
+                  value={resultView}
+                  exclusive
+                  onChange={(e, v) => v && setResultView(v)}
+                  size="small"
+                  aria-label="result view"
+                >
+                  <ToggleButton value="list" aria-label="list view">
+                    <ListIcon sx={{ mr: 0.5, fontSize: 18 }} /> List
+                  </ToggleButton>
+                  <ToggleButton value="map" aria-label="map view">
+                    <MapIcon sx={{ mr: 0.5, fontSize: 18 }} /> Map
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+            )}
+
+            {results.length > 0 && resultView === "map" && (
+              <Box sx={{ mt: 1 }}>
+                <AdminEntityMap
+                  items={mapItems}
+                  countNoun="studio"
+                  onItemClick={(item) => handleStudioClick(item._raw)}
+                  emptyLabel="None of these studios have a saved location to plot."
+                />
+              </Box>
+            )}
+
+            {results.length > 0 && resultView === "list" && (
+              <TableContainer component={Paper} sx={{ mt: 1 }}>
                 <Table>
                   <TableHead>
                     <TableRow>

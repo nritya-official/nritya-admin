@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -41,9 +41,12 @@ import {
   Delete as DeleteIcon,
   Add as AddIcon,
   Edit as EditIcon,
+  Map as MapIcon,
+  ViewList as ListIcon,
 } from "@mui/icons-material";
 import axios from "axios";
 import WorkshopForm from "../Components/workshop-crud/WorkshopForm";
+import AdminEntityMap, { parseGeo } from "../Components/AdminEntityMap";
 import WorkshopRevenueTable from "./WorkshopRevenueTable";
 import { BASEURL_PROD } from "../constants";
 import citiesData from "../cities.json";
@@ -142,9 +145,32 @@ function WorkshopCrud() {
   const [isSubmited, setIsSubmited] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
+  const [resultView, setResultView] = useState("list"); // 'list' | 'map'
 
   const baseUrlServer = server[mode];
   const baseUrlRender = render[mode];
+
+  const mapItems = useMemo(
+    () =>
+      (results || [])
+        .map((workshop) => {
+          const geo = parseGeo(workshop.geolocation);
+          if (!geo) return null;
+          return {
+            key: workshop.workshop_id,
+            geo,
+            name: workshop.name || "Workshop",
+            addressLine: [workshop.building, workshop.street, workshop.city].filter(Boolean).join(", "),
+            meta: workshop.creator_email || workshop.creatorEmail || "",
+            badge: workshop.dance_styles ? workshop.dance_styles.split(",")[0].trim() : null,
+            viewUrl: `${baseUrlRender}/workshop/${workshop.workshop_id}`,
+            ctaLabel: "Edit",
+            _raw: workshop,
+          };
+        })
+        .filter(Boolean),
+    [results, baseUrlRender]
+  );
 
   const [formData, setFormData] = useState(initialData);
   const [errors, setErrors] = useState({});
@@ -1093,7 +1119,37 @@ function WorkshopCrud() {
 
 
             {results.length > 0 && (
-              <TableContainer component={Paper} sx={{ mt: 4 }}>
+              <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 4, mb: 1 }}>
+                <ToggleButtonGroup
+                  value={resultView}
+                  exclusive
+                  onChange={(e, v) => v && setResultView(v)}
+                  size="small"
+                  aria-label="result view"
+                >
+                  <ToggleButton value="list" aria-label="list view">
+                    <ListIcon sx={{ mr: 0.5, fontSize: 18 }} /> List
+                  </ToggleButton>
+                  <ToggleButton value="map" aria-label="map view">
+                    <MapIcon sx={{ mr: 0.5, fontSize: 18 }} /> Map
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+            )}
+
+            {results.length > 0 && resultView === "map" && (
+              <Box sx={{ mt: 1 }}>
+                <AdminEntityMap
+                  items={mapItems}
+                  countNoun="workshop"
+                  onItemClick={(item) => handleWorkshopClick(item._raw)}
+                  emptyLabel="None of these workshops have a saved location to plot."
+                />
+              </Box>
+            )}
+
+            {results.length > 0 && resultView === "list" && (
+              <TableContainer component={Paper} sx={{ mt: 1 }}>
                 <Table>
                   <TableHead>
                     <TableRow>
