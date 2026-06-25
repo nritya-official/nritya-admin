@@ -81,7 +81,7 @@ The admin app supports multiple operational flows beyond Target Users CRM.
 - **Workshop CRUD:** `#/workshopsCrud`  
   Create/update workshop metadata, pricing, and listing details.
 - **Workshop Bookings Monitor:** `#/workshopBookings`  
-  Track workshop booking records and payment-linked booking status.
+  Track workshop booking records and payment-linked booking status. Each row links to the public workshop page (slug route `/workshop/slug/<slug>` when a slug exists, otherwise `/workshop/<id>`). The **Profile View** aggregates bookings by email + phone and lists the distinct workshops each buyer attended. Both views support **Export CSV / Export Excel**.
 
 ### Studio Operations
 

@@ -12,12 +12,6 @@ import {
   CircularProgress,
   ToggleButtonGroup,
   ToggleButton,
-  TableContainer,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
   Paper,
   Stack,
   Pagination,
@@ -38,6 +32,7 @@ import {
   ViewList as ViewListIcon
 } from '@mui/icons-material';
 import axios from 'axios';
+import VirtualizedTransactionTable from '../Components/VirtualizedTransactionTable';
 
 const SERVER_URLS = {
   PRODUCTION: 'https://djserver-production-ffe37b1b53b5.herokuapp.com/',
@@ -370,64 +365,14 @@ function Transactions() {
     </Grid>
   );
 
-  // Render transaction table
+  // Render transaction table (windowed — only ~20 visible rows are mounted)
   const renderTransactionTable = () => (
-    <TableContainer component={Paper} sx={{ mt: 2 }}>
-      <Table size="small" stickyHeader>
-        <TableHead>
-          <TableRow>
-            <TableCell><strong>Transaction ID</strong></TableCell>
-            <TableCell><strong>Status</strong></TableCell>
-            <TableCell><strong>User Email</strong></TableCell>
-            <TableCell><strong>User ID</strong></TableCell>
-            <TableCell align="right"><strong>Subtotal</strong></TableCell>
-            <TableCell align="right"><strong>Fee</strong></TableCell>
-            <TableCell align="right"><strong>Total</strong></TableCell>
-            <TableCell><strong>Payment Method</strong></TableCell>
-            <TableCell><strong>Razorpay Payment ID</strong></TableCell>
-            <TableCell><strong>Razorpay Order ID</strong></TableCell>
-            <TableCell><strong>Created At</strong></TableCell>
-            <TableCell><strong>Error</strong></TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {transactions.map((transaction) => (
-            <TableRow 
-              key={transaction.transaction_id}
-              hover
-              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-            >
-              <TableCell sx={{ fontSize: '0.75rem' }}>{transaction.transaction_id || 'N/A'}</TableCell>
-              <TableCell>
-                <Chip 
-                  label={transaction.payment_status || 'Unknown'} 
-                  color={getStatusColor(transaction.payment_status)}
-                  size="small"
-                />
-              </TableCell>
-              <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {transaction.user_email || 'N/A'}
-              </TableCell>
-              <TableCell>{transaction.user_id || 'N/A'}</TableCell>
-              <TableCell align="right">{formatAmount(transaction.subtotal)}</TableCell>
-              <TableCell align="right">{formatAmount(transaction.booking_fee)}</TableCell>
-              <TableCell align="right"><strong>{formatAmount(transaction.total_amount)}</strong></TableCell>
-              <TableCell>{transaction.payment_method || 'N/A'}</TableCell>
-              <TableCell sx={{ fontSize: '0.7rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {transaction.razorpay_payment_id || 'N/A'}
-              </TableCell>
-              <TableCell sx={{ fontSize: '0.7rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {transaction.razorpay_order_id || 'N/A'}
-              </TableCell>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(transaction.created_at)}</TableCell>
-              <TableCell sx={{ fontSize: '0.7rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {transaction.error_code ? `${transaction.error_code}: ${transaction.error_reason || ''}` : 'N/A'}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <VirtualizedTransactionTable
+      rows={transactions}
+      formatAmount={formatAmount}
+      formatDate={formatDate}
+      getStatusColor={getStatusColor}
+    />
   );
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);

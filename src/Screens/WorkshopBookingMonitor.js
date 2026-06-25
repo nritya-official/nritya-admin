@@ -30,8 +30,10 @@ import {
   DateRange as DateRangeIcon,
   OpenInNew as OpenInNewIcon,
   Refresh as RefreshIcon,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
 import axios from "axios";
+import * as XLSX from "xlsx";
 import { BASEURL_PROD } from "../constants";
 
 const server = {
@@ -135,6 +137,78 @@ function WorkshopBookingMonitor() {
     return `${baseUrlRender}workshopExperience/${userId}/${workshopId}`;
   };
 
+  // Build the public workshop URL: prefer the slug route, fall back to id route
+  const getWorkshopLink = (workshopId, slug) => {
+    if (slug) {
+      return `${baseUrlRender}workshop/slug/${slug}`;
+    }
+    return `${baseUrlRender}workshop/${workshopId}`;
+  };
+
+  // Write an array of plain objects to a downloadable CSV or XLSX file
+  const exportRows = (rows, fileBaseName, format) => {
+    if (!rows || rows.length === 0) return;
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const fileName = `${fileBaseName}_${mode.toLowerCase()}_${timestamp}`;
+
+    if (format === "csv") {
+      const csv = XLSX.utils.sheet_to_csv(worksheet);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${fileName}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } else {
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+      XLSX.writeFile(workbook, `${fileName}.xlsx`);
+    }
+  };
+
+  const exportBookings = (format) => {
+    const rows = bookings.map((b) => ({
+      "Booking ID": b.booking_id,
+      "Buyer Name": b.buyer_name,
+      "Buyer Email": b.buyer_email,
+      "Buyer Phone": b.buyer_phone || "",
+      "Workshop Name": b.workshop_name || "",
+      "Workshop ID": b.workshop_id,
+      "Workshop URL": getWorkshopLink(b.workshop_id, b.workshop_slug),
+      "User ID": b.user_id || "",
+      "Booking Date": formatDateTime(b.created_at),
+      "Total Amount": b.total_amount,
+      "Payment Status": b.payment_status || "",
+      "Transaction ID": b.transaction_id || "",
+    }));
+    exportRows(rows, "workshop_bookings", format);
+  };
+
+  const exportProfiles = (format) => {
+    const rows = profileData.map((p) => ({
+      "Buyer Name": p.name,
+      Email: p.email,
+      Phone: p.phone,
+      "No. of Bookings": p.bookingCount,
+      "Total Amount": p.totalAmount,
+      "Workshops Attended": Array.from(p.workshops.values())
+        .map((wk) => `${wk.name || wk.workshop_id}${wk.count > 1 ? ` (x${wk.count})` : ""}`)
+        .join("; "),
+      "First Booking": p.firstBookingDate ? formatDateTime(p.firstBookingDate.toISOString()) : "N/A",
+      "Last Booking": p.lastBookingDate ? formatDateTime(p.lastBookingDate.toISOString()) : "N/A",
+    }));
+    exportRows(rows, "workshop_profiles", format);
+  };
+
+  const handleExport = (format) => {
+    if (viewMode === 1) {
+      exportProfiles(format);
+    } else {
+      exportBookings(format);
+    }
+  };
+
   // Helper function to get active filters text
   const getActiveFiltersText = () => {
     if (amountFilter === "all") {
@@ -161,12 +235,28 @@ function WorkshopBookingMonitor() {
           totalAmount: 0,
           lastBookingDate: null,
           firstBookingDate: null,
+          workshops: new Map(),
         });
       }
       
       const profile = profileMap.get(profileKey);
       profile.bookingCount += 1;
       profile.totalAmount += booking.total_amount || 0;
+
+      // Track distinct workshops attended by this profile
+      if (booking.workshop_id) {
+        const existing = profile.workshops.get(booking.workshop_id);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          profile.workshops.set(booking.workshop_id, {
+            workshop_id: booking.workshop_id,
+            name: booking.workshop_name || '',
+            slug: booking.workshop_slug || '',
+            count: 1,
+          });
+        }
+      }
       
       const bookingDate = booking.created_at ? new Date(booking.created_at) : null;
       if (bookingDate) {
@@ -431,7 +521,7 @@ function WorkshopBookingMonitor() {
               </Box>
             )}
             
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
               {viewMode === 0 && (
                 <Chip
                   label={`Total Bookings: ${bookings.length}`}
@@ -446,6 +536,29 @@ function WorkshopBookingMonitor() {
                   sx={{ fontSize: "1rem", fontWeight: "bold", py: 2.5 }}
                 />
               )}
+
+              <Box sx={{ flexGrow: 1 }} />
+
+              <Button
+                variant="outlined"
+                color="success"
+                startIcon={<DownloadIcon />}
+                onClick={() => handleExport("csv")}
+                disabled={viewMode === 1 ? profileData.length === 0 : bookings.length === 0}
+                sx={{ textTransform: "none", fontWeight: "bold" }}
+              >
+                Export CSV
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<DownloadIcon />}
+                onClick={() => handleExport("xlsx")}
+                disabled={viewMode === 1 ? profileData.length === 0 : bookings.length === 0}
+                sx={{ textTransform: "none", fontWeight: "bold" }}
+              >
+                Export Excel
+              </Button>
             </Box>
           </CardContent>
         </Card>
@@ -462,6 +575,7 @@ function WorkshopBookingMonitor() {
                 <TableCell sx={{ fontWeight: "bold" }}>Phone</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }} align="center">No. of Bookings</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }} align="right">Total Amount</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Workshops Attended</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>First Booking</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>Last Booking</TableCell>
               </TableRow>
@@ -496,6 +610,26 @@ function WorkshopBookingMonitor() {
                       ₹{profile.totalAmount.toFixed(2)}
                     </Typography>
                   </TableCell>
+                  <TableCell sx={{ maxWidth: 320 }}>
+                    <Stack spacing={0.5}>
+                      {Array.from(profile.workshops.values()).map((wk) => (
+                        <Box key={wk.workshop_id} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                          <Link
+                            href={getWorkshopLink(wk.workshop_id, wk.slug)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            underline="hover"
+                            sx={{ fontSize: "0.85rem" }}
+                          >
+                            {wk.name || wk.workshop_id}
+                          </Link>
+                          {wk.count > 1 && (
+                            <Chip label={`×${wk.count}`} size="small" sx={{ height: 18, fontSize: "0.65rem" }} />
+                          )}
+                        </Box>
+                      ))}
+                    </Stack>
+                  </TableCell>
                   <TableCell>{profile.firstBookingDate ? formatDateTime(profile.firstBookingDate.toISOString()) : "N/A"}</TableCell>
                   <TableCell>{profile.lastBookingDate ? formatDateTime(profile.lastBookingDate.toISOString()) : "N/A"}</TableCell>
                 </TableRow>
@@ -515,7 +649,7 @@ function WorkshopBookingMonitor() {
                 <TableCell sx={{ fontWeight: "bold" }}>Buyer Name</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>Buyer Email</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>Buyer Phone</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Workshop ID</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Workshop</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>User ID</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>Booking Date</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>Total Amount</TableCell>
@@ -549,13 +683,16 @@ function WorkshopBookingMonitor() {
                     </TableCell>
                     <TableCell>
                       <Link
-                        href={`${baseUrlRender}workshop/${booking.workshop_id}`}
+                        href={getWorkshopLink(booking.workshop_id, booking.workshop_slug)}
                         target="_blank"
                         rel="noopener noreferrer"
                         underline="hover"
                       >
-                        {booking.workshop_id}
+                        {booking.workshop_name || booking.workshop_id}
                       </Link>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontFamily: "monospace", fontSize: "0.7rem" }}>
+                        {booking.workshop_id}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: "0.85rem" }}>
