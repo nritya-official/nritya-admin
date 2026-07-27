@@ -35,6 +35,7 @@ import PageTracking from "./Screens/PageTracking";
 import WorkshopBookingMonitor from "./Screens/WorkshopBookingMonitor";
 import TargetUsers from "./Screens/TargetUsers";
 import WorkshopMaster from "./Screens/WorkshopMaster";
+import CreatorAnalytics from "./Screens/CreatorAnalytics";
 
 const darkTheme = createTheme({
   palette: {
@@ -71,6 +72,7 @@ function App() {
                 <Route path="/workshopBookings" element={<WorkshopBookingMonitor />} />
                 <Route path="/targetUsers" element={<TargetUsers />} />
                 <Route path="/workshopMaster" element={<WorkshopMaster />} />
+                <Route path="/creatorAnalytics" element={<CreatorAnalytics />} />
                 <Route element={<ProtectedRoles roleInput={1} />}>
                   <Route path="/adminMgmt" element={<AdminMgmt />} />
                   <Route path="/data" element={<Data />} />

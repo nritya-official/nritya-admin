@@ -4,6 +4,7 @@ import { Card, CardContent, Typography, TextField, Button, Select, MenuItem, Gri
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
+import InstaInstructors from '../Components/InstaInstructors';
 
 
 function Instructors() {
@@ -40,6 +41,7 @@ function Instructors() {
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <TabList onChange={handleChange} aria-label="lab API tabs example">
             <Tab label="Search" value="1" />
+            <Tab label="Instagram Instructors" value="4" />
             <Tab label="Profile Migration" value="2" />
             <Tab label="Others" value="3" />
           </TabList>
@@ -148,6 +150,9 @@ function Instructors() {
                   </CardContent>
               </Card>
             
+          </TabPanel>
+          <TabPanel value="4">
+            <InstaInstructors />
           </TabPanel>
         <TabPanel value="3">Others</TabPanel>
       </TabContext>
