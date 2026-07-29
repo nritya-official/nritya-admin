@@ -73,3 +73,12 @@ export const SEARCH_FILTERS ={
 
 export const BASEURL_DEV = "http://127.0.0.1:8000/"
 export const BASEURL_PROD= "https://nrityaserver-2b241e0a97e5.herokuapp.com/"
+
+// Server picked by the mode toggle. Shared so a revenue URL opened on its own
+// resolves to the same host the workshop list was read from.
+export const SERVERS = {
+  PRODUCTION: "https://djserver-production-ffe37b1b53b5.herokuapp.com/",
+  STAGING: "https://nrityaserver-2b241e0a97e5.herokuapp.com/",
+}
+
+export const DEFAULT_SERVER_MODE = "PRODUCTION"

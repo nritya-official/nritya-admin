@@ -47,22 +47,17 @@ import {
 import axios from "axios";
 import WorkshopForm from "../Components/workshop-crud/WorkshopForm";
 import AdminEntityMap, { parseGeo } from "../Components/AdminEntityMap";
-import WorkshopRevenueTable from "./WorkshopRevenueTable";
-import { BASEURL_PROD } from "../constants";
+import { Link as RouterLink } from "react-router-dom";
+import { BASEURL_PROD, SERVERS } from "../constants";
 import citiesData from "../cities.json";
 
 const WINDOWS = {
   DEFAULT: "default",
   ADD_WORKSHOP: "addWorkshop",
   UPDATE_WORKSHOP: "updateWorkshop",
-  WORKSHOP_REVENUE: "workshopRevenue",
 };
 const local = "http://0.0.0.0:8000/"
-// Mode URLs
-const server = {
-  PRODUCTION: "https://djserver-production-ffe37b1b53b5.herokuapp.com/",
-  STAGING: "https://nrityaserver-2b241e0a97e5.herokuapp.com/",
-};
+const server = SERVERS;
 
 const render = {
   PRODUCTION: "https://www.nritya.co.in/",
@@ -683,12 +678,6 @@ function WorkshopCrud() {
     }
   };
 
-  const handleRevenue = (workshop) => {
-    // Set the selected workshop for revenue display
-    setSelectedWorkshop(workshop);
-    setCurrentWindow(WINDOWS.WORKSHOP_REVENUE);
-  };
-
   // Discount management handlers
   const handleOpenDiscountDialog = async (workshop) => {
     setSelectedWorkshopForDiscount(workshop);
@@ -831,24 +820,6 @@ function WorkshopCrud() {
           onSubmit={handleSubmit}
           onUpdate={(payload) => pushData(selectedWorkshop.workshop_id, "Workshop", payload)}
         />
-      )}
-
-      {currentWindow === WINDOWS.WORKSHOP_REVENUE && (
-        <Box sx={{ p: 3 }}>
-          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Button 
-              variant="outlined" 
-              onClick={() => setCurrentWindow(WINDOWS.DEFAULT)}
-              sx={{ minWidth: '100px' }}
-            >
-              ← Back
-            </Button>
-            <Typography variant="h5" sx={{ textTransform: 'none' }}>
-              Workshop Revenue: {selectedWorkshop?.name || 'Loading...'}
-            </Typography>
-          </Box>
-          <WorkshopRevenueTable workshopId={selectedWorkshop?.workshop_id} baseUrlServer={baseUrlServer} />
-        </Box>
       )}
 
       {currentWindow === WINDOWS.DEFAULT && (
@@ -1262,11 +1233,12 @@ function WorkshopCrud() {
                                 Delete
                               </Button>
                             </Tooltip>
-                            <Tooltip>
+                            <Tooltip title="Open revenue on its own page">
                               <Button
+                                component={RouterLink}
+                                to={`/workshopRevenue/${workshop.workshop_id}?mode=${mode}`}
                                 variant="text"
                                 size="small"
-                                onClick={() => handleRevenue(workshop)}
                                 sx={{ 
                                   fontSize: "12px", 
                                   py: 0, 

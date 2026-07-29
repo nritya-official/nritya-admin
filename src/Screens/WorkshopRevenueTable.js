@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { BASEURL_PROD } from '../constants';
+import SubvariantBookingsDialog from '../Components/SubvariantBookingsDialog';
 
 const WorkshopRevenueTable = ({ workshopId, baseUrlServer }) => {
   const [revenueData, setRevenueData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [openSubvariantId, setOpenSubvariantId] = useState(null);
 
   useEffect(() => {
     const fetchRevenueData = async () => {
@@ -158,13 +160,24 @@ const WorkshopRevenueTable = ({ workshopId, baseUrlServer }) => {
                     {subvariant.capacity}
                   </td>
                   <td style={{ border: '1px solid #ccc', padding: '12px', textAlign: 'center' }}>
-                    <span style={{ 
-                      color: subvariant.quantity === subvariant.capacity ? '#d32f2f' : 
-                             subvariant.quantity > subvariant.capacity * 0.8 ? '#f57c00' : '#388e3c',
-                      fontWeight: 'bold'
-                    }}>
+                    <button
+                      type="button"
+                      title="Show the bookings behind this number"
+                      onClick={() => setOpenSubvariantId(subvariantId)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        font: 'inherit',
+                        textDecoration: 'underline',
+                        color: subvariant.quantity === subvariant.capacity ? '#d32f2f' :
+                               subvariant.quantity > subvariant.capacity * 0.8 ? '#f57c00' : '#388e3c',
+                        fontWeight: 'bold'
+                      }}
+                    >
                       {subvariant.quantity}
-                    </span>
+                    </button>
                   </td>
                   <td style={{ border: '1px solid #ccc', padding: '12px', textAlign: 'center' }}>
                     <strong style={{ color: '#1976d2' }}>₹{subvariant.subtotal.toLocaleString()}</strong>
@@ -180,6 +193,13 @@ const WorkshopRevenueTable = ({ workshopId, baseUrlServer }) => {
       <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '12px', color: '#666' }}>
         <p>Data last updated: {new Date().toLocaleString()}</p>
       </div>
+
+      <SubvariantBookingsDialog
+        open={Boolean(openSubvariantId)}
+        onClose={() => setOpenSubvariantId(null)}
+        subvariantId={openSubvariantId}
+        baseUrlServer={baseUrlServer}
+      />
     </div>
   );
 };

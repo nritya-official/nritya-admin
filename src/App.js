@@ -36,6 +36,7 @@ import WorkshopBookingMonitor from "./Screens/WorkshopBookingMonitor";
 import TargetUsers from "./Screens/TargetUsers";
 import WorkshopMaster from "./Screens/WorkshopMaster";
 import CreatorAnalytics from "./Screens/CreatorAnalytics";
+import WorkshopRevenue from "./Screens/WorkshopRevenue";
 
 const darkTheme = createTheme({
   palette: {
@@ -62,6 +63,7 @@ function App() {
                 <Route path="/user-kycs" element={<UserKycsNew />} />
                 <Route path="/studiosCrud" element={<StudioCrud />} />
                 <Route path="/workshopsCrud" element={<WorkshopCrud />} />
+                <Route path="/workshopRevenue/:workshopId" element={<WorkshopRevenue />} />
                 <Route path="/studios" element={<Studios />} />
                 <Route path="/workshops" element={<Workshops />} />
                 <Route path="/bookings" element={<Bookings />} />
