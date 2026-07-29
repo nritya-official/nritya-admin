@@ -1,6 +1,10 @@
 import { memo } from "react";
 import { List } from "react-window";
-import { Box, Chip, Typography } from "@mui/material";
+import { Box, Button, Chip, Typography } from "@mui/material";
+
+// Only these need a live Razorpay lookup — a Success row already carries its
+// payment id, so there is nothing to resolve.
+const NEEDS_RAZORPAY_CHECK = new Set(["failed", "pending"]);
 
 const ROW_HEIGHT = 44;
 const HEADER_HEIGHT = 40;
@@ -22,6 +26,7 @@ const COLUMNS = [
   { key: "razorpay_order_id", label: "Razorpay Order ID", width: 170, align: "left" },
   { key: "created_at", label: "Created At", width: 160, align: "left" },
   { key: "error", label: "Error", width: 170, align: "left" },
+  { key: "razorpay_check", label: "Razorpay", width: 120, align: "left" },
 ];
 
 const TOTAL_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
@@ -51,9 +56,13 @@ const TransactionRow = memo(function TransactionRow({
   formatAmount,
   formatDate,
   getStatusColor,
+  onCheckRazorpay,
 }) {
   const t = rows[index];
   if (!t) return null;
+
+  const canCheck =
+    NEEDS_RAZORPAY_CHECK.has(t.payment_status?.toLowerCase()) && Boolean(t.razorpay_order_id);
 
   return (
     <Box
@@ -95,6 +104,22 @@ const TransactionRow = memo(function TransactionRow({
       <Cell width={COLUMNS[12].width} align="left" mono title={t.error_code ? `${t.error_code}: ${t.error_reason || ""}` : ""}>
         {t.error_code ? `${t.error_code}: ${t.error_reason || ""}` : "N/A"}
       </Cell>
+      <Cell width={COLUMNS[13].width} align="left">
+        {canCheck ? (
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => onCheckRazorpay?.(t.razorpay_order_id)}
+            sx={{ fontSize: 10, py: 0, minWidth: 0, textTransform: "none" }}
+          >
+            Check
+          </Button>
+        ) : (
+          <Typography variant="caption" color="text.secondary">
+            —
+          </Typography>
+        )}
+      </Cell>
     </Box>
   );
 });
@@ -103,7 +128,13 @@ const TransactionRow = memo(function TransactionRow({
  * Windowed transaction table. Only the visible (~20) rows are mounted, so large
  * result sets stay smooth. Horizontally scrollable to fit all columns.
  */
-export default function VirtualizedTransactionTable({ rows, formatAmount, formatDate, getStatusColor }) {
+export default function VirtualizedTransactionTable({
+  rows,
+  formatAmount,
+  formatDate,
+  getStatusColor,
+  onCheckRazorpay,
+}) {
   if (!rows || rows.length === 0) return null;
 
   const visibleRows = Math.min(rows.length, MAX_VISIBLE_ROWS);
@@ -150,7 +181,7 @@ export default function VirtualizedTransactionTable({ rows, formatAmount, format
           rowHeight={ROW_HEIGHT}
           overscanCount={8}
           rowComponent={TransactionRow}
-          rowProps={{ rows, formatAmount, formatDate, getStatusColor }}
+          rowProps={{ rows, formatAmount, formatDate, getStatusColor, onCheckRazorpay }}
         />
       </Box>
     </Box>

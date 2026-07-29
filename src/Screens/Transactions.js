@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import VirtualizedTransactionTable from '../Components/VirtualizedTransactionTable';
+import { RazorpayOrderStatusDialog } from '../Components/RazorpayOrderStatus';
 
 const SERVER_URLS = {
   PRODUCTION: 'https://djserver-production-ffe37b1b53b5.herokuapp.com/',
@@ -64,7 +65,15 @@ function Transactions() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Razorpay lookup popup (read-only)
+  const [razorpayOrderId, setRazorpayOrderId] = useState(null);
+
   const baseUrl = SERVER_URLS[environment];
+
+  // Only Failed/Pending rows are ambiguous; a Success row already has its payment id.
+  const needsRazorpayCheck = (transaction) =>
+    ['failed', 'pending'].includes(transaction.payment_status?.toLowerCase()) &&
+    Boolean(transaction.razorpay_order_id);
 
   // Format helpers
   const formatDate = (timestamp) => {
@@ -359,6 +368,17 @@ function Transactions() {
                 </Typography>
               </Alert>
             )}
+
+            {needsRazorpayCheck(transaction) && (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => setRazorpayOrderId(transaction.razorpay_order_id)}
+                sx={{ mt: 1, fontSize: 11, textTransform: 'none' }}
+              >
+                Check status on Razorpay
+              </Button>
+            )}
           </Stack>
         </CardContent>
       </Card>
@@ -372,6 +392,7 @@ function Transactions() {
       formatAmount={formatAmount}
       formatDate={formatDate}
       getStatusColor={getStatusColor}
+      onCheckRazorpay={setRazorpayOrderId}
     />
   );
 
@@ -593,6 +614,13 @@ function Transactions() {
           </Typography>
         </Paper>
       )}
+
+      <RazorpayOrderStatusDialog
+        open={Boolean(razorpayOrderId)}
+        onClose={() => setRazorpayOrderId(null)}
+        orderId={razorpayOrderId}
+        baseUrlServer={baseUrl}
+      />
     </Box>
   );
 }
